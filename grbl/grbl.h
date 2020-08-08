@@ -26,11 +26,17 @@
 #define GRBL_VERSION_BUILD "20190830"
 
 // Define standard libraries used by Grbl.
+#ifdef AVR
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
+#elif STM32
+#include 
+#else 
+#error "You must define AVR or STM32 in order to compile this project."
+#endif
 #include <math.h>
 #include <inttypes.h>
 #include <string.h>
