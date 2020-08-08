@@ -4,3 +4,6 @@
 [submodule "stm32f407/cmsis"]
 	path = stm32f407/cmsis
 	url = https://github.com/STMicroelectronics/cmsis_device_f4.git
+[submodule "stm32f407/usb"]
+	path = stm32f407/usb
+	url = https://github.com/STMicroelectronics/stm32_mw_usb_device.git
