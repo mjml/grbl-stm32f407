@@ -29,7 +29,9 @@
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
 DEVICE     ?= atmega328p
-CLOCK      = 16000000
+#CLOCK      = 16000000
+CLOCK       = 168000000
+
 PROGRAMMER ?= -c avrisp2 -P usb
 SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.c \
              protocol.c stepper.c eeprom.c settings.c planner.c nuts_bolts.c limits.c jog.c\
@@ -39,6 +41,12 @@ SOURCEDIR = grbl
 # FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
 FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
 
+OBJDUMP=arm-none-eabi-objdump
+OBJCOPY=arm-none-eabi-objcopy
+CC=arm-none-eabi-gcc
+AS=arm-none-eabi-as
+SIZE=arm-none-eabi-size
+CFLAGS=-DSTM32 -Wall -Os 
 
 # All the following needed for STM32:
 # CMSIS (lowest level)
@@ -48,21 +56,31 @@ FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
 
 STM32_PATH = stm32f407
 
-CMSIS_PATH = $(STM32_PATH)/cmsis
-CMSIS = $(CMSIS)/Source
-CMSIS_INCL = $(CMSIS)/Include
+CMSIS_PATH = $(STM32_PATH)/cmsis/Source/Templates
+CMSIS_MODULES = system_stm32f4xx.c gcc/startup_stm32f407xx.s
+CMSIS_SOURCES = $(addprefix $(CMSIS_PATH)/,$(CMSIS_MODULES))
+CMSIS_OBJECTS = $(addprefix $(BUILDDIR)/cmsis/,$(addsuffix .o,$(notdir $(basename $(CMSIS_SOURCES)))))
 
 HAL_PATH = $(STM32_PATH)/hal
-HAL = $(HAL_PATH)/Src
+HAL_SRC = $(HAL_PATH)/Src
 HAL_INCL = $(HAL_PATH)/Inc
+HAL_MODULES = gpio.c rcc.c flash.c tim.c
+HAL_SOURCES = $(addprefix $(HAL_PATH)/stm32f4xx_hal_,$(HAL_MODULES))
+HAL_OBJECTS = $(addprefix $(BUILDDIR)/hal/,$(notdir $(HAL_SOURCES:.c=.o)))
 
 USB_PATH = $(STM32_PATH)/usb
-USB = $(USB_PATH)/Core/Src
+USB_SRC = $(USB_PATH)/Core/Src
 USB_INCL = $(USB_PATH)/Core/Inc
-USB_CDC_PATH = $(USB_PATH)/Class/CDC
-USB_CDC = $(USB_CDC_PATH)/Src
-USB_CDC_INCL = $(USB_CDC_PATH)/Inc
+USB_MODULES = usbd_core.c usbd_ctlreq.c usbd_ioreq.c
+USB_SOURCES = $(addprefix $(USB_SRC)/,$(USB_MODULES))
+USB_OBJECTS = $(addprefix $(BUILDDIR)/usb/,$(notdir $(USB_SOURCES:.c=.o))) $(BUILDDIR)/impl/usbd_conf.o $(BUILDDIR)/impl/usbd_desc.o
 
+USBCDC_PATH = $(USB_PATH)/Class/CDC
+USBCDC_SRC = $(USBCDC_PATH)/Src
+USBCDC_INCL = $(USBCDC_PATH)/Inc
+USBCDC_MODULES = usbd_cdc.c
+USBCDC_SOURCES = $(addprefix $(USBCDC_SRC)/,$(USBCDC_MODULES))
+USBCDC_OBJECTS = $(addprefix $(BUILDDIR)/usbcdc/,$(notdir $(USBCDC_MODULES:.c=.o))) $(BUILDDIR)/impl/usbd_cdc_if.o
 
 # Tune the lines below only if you know what you are doing:
 
@@ -72,16 +90,56 @@ AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
 # COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections
 
 # Compile flags for avr-gcc v4.9.2 compatible with the IDE. Or if you don't care about the warnings. 
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections -flto
-
+#COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections -flto
+COMPILE = $(CC) $(CFLAGS) -I$(CMSIS_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I.
+ASM = $(AS) -Wall
 
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
 
 # symbolic targets:
+@default:
+	@echo USB_SOURCES are $(USB_SOURCES)
+	@echo USB_OBJECTS are $(USB_OBJECTS)
+	@echo USBCDC_SRC is $(USBCDC_SRC)
+	@echo USBCDC_SOURCES are $(USBCDC_SOURCES)
+	@echo USBCDC_OBJECTS are $(USBCDC_OBJECTS)
+
 all:	grbl.hex
 
 $(BUILDDIR)/%.o: $(SOURCEDIR)/%.c
 	$(COMPILE) -MMD -MP -c $< -o $@
+
+# These two CMSIS modules are special and are added explicitly. 
+# These need to be chosen to reflect the ARM architecture
+$(BUILDDIR)/cmsis/system_stm32f4xx.o: $(CMSIS_PATH)/system_stm32f4xx.c
+	$(COMPILE) -c $< -o $@
+
+$(BUILDDIR)/cmsis/startup_stm32f407xx.o: $(CMSIS_PATH)/gcc/startup_stm32f407xx.s
+	$(ASM) -c $< -o $@
+
+$(BUILDDIR)/hal/%.o: $(HAL)/%.c
+	$(COMPILE) -c $< -o $@
+
+# These three USB modules are built from template examples provided by the USB and USB/CDC middleware sourcetree.
+# I want them to go with the middleware objects, so they need their own explicit rules to override the implicit ones to follow.
+$(BUILDDIR)/impl/usbd_conf.o: $(STM32_PATH)/impl/usbd_conf.c $(USB_SRC)/usbd_conf_template.c
+	$(COMPILE) -c $< -o $@
+
+$(BUILDDIR)/impl/usbd_desc.o: $(STM32_PATH)/impl/usbd_desc.c $(USB_SRC)/usbd_desc_template.c
+	$(COMPILE) -c $< -o $@
+
+$(BUILDDIR)/impl/usbd_cdc_if.o: $(STM32_PATH)/impl/usbd_cdc_if.c $(USBCDC_SRC)/usbd_cdc_if_template.c
+	$(COMPILE) -c $< -o $@
+
+# Finally, the default rules for the stm32 imported submodules not covered by the above.
+$(BUILDDIR)/hal/%.o: $(HAL_SRC)/%.c
+	$(COMPILE) -c $< -o $@
+
+$(BUILDDIR)/usb/%.o: $(USB_SRC)/%.c
+	$(COMPILE) -c $< -o $@
+
+$(BUILDDIR)/usbcdc/%.o: $(USBCDC_SRC)/%.c
+	$(COMPILE) -c $< -o $@
 
 .S.o:
 	$(COMPILE) -x assembler-with-cpp -c $< -o $(BUILDDIR)/$@
@@ -110,19 +168,19 @@ clean:
 	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf
 
 # file targets:
-$(BUILDDIR)/main.elf: $(OBJECTS)
-	$(COMPILE) -o $(BUILDDIR)/main.elf $(OBJECTS) -lm -Wl,--gc-sections
+$(BUILDDIR)/main.elf: $(OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
+	$(COMPILE) -o $(BUILDDIR)/main.elf $(OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) -lm -Wl,--gc-sections
 
 grbl.hex: $(BUILDDIR)/main.elf
 	rm -f grbl.hex
-	avr-objcopy -j .text -j .data -O ihex $(BUILDDIR)/main.elf grbl.hex
-	avr-size --format=berkeley $(BUILDDIR)/main.elf
+	$(OBJCOPY) -j .text -j .data -O ihex $(BUILDDIR)/main.elf grbl.hex
+	$(SIZE) --format=berkeley $(BUILDDIR)/main.elf
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.
 
 # Targets for code debugging and analysis:
 disasm:	main.elf
-	avr-objdump -d $(BUILDDIR)/main.elf
+	$(OBJDUMP) -d $(BUILDDIR)/main.elf
 
 cpp:
 	$(COMPILE) -E $(SOURCEDIR)/main.c
