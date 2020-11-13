@@ -1,0 +1,16 @@
+* Read and understand the Makefile and figure out how to add the STM32 USB/CDC modules to the build
+
+* Determine whether the skeleton USB/CDC files are sufficient for this application
+
+* Write configuration, interface, and endpoint descriptors into the skeleton
+
+* Write some kind of simple test of the USB/CDC interface and endpoint
+
+* Define GPIOs for all the required stepper ENA and DIR pins
+** Reserve additional stepper pins for the A&B axes
+
+* Define GPIOs for any additional features of the gantry (lights, sounds)
+
+* Inspect grbl's "prediction/anticipation" code to see if encoder outputs can be tied in,
+   putting grbl directly into each stepper's control loop.
+
