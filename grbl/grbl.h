@@ -33,7 +33,23 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 #elif STM32
-#include 
+// cmsis
+#include <stm32f407xx.h>
+// hal
+#include <stm32f4xx_hal_rcc.h>
+#include <stm32f4xx_hal_cortex.h>
+#include <stm32f4xx_hal_flash.h>
+#include <stm32f4xx_hal_tim.h>
+#include <stm32f4xx_hal_gpio.h>
+// usb core
+#include <usbd_conf.h>
+#include <usbd_core.h>
+#include <usbd_def.h>
+#include <usbd_desc.h>
+#include <usbd_ioreq.h>
+// usb cdc
+#include <usbd_cdc.h>
+#include <usbd_cdc_if.h>
 #else 
 #error "You must define AVR or STM32 in order to compile this project."
 #endif

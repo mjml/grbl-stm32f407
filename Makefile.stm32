@@ -58,13 +58,14 @@ STM32_PATH = stm32f407
 
 CMSIS_PATH = $(STM32_PATH)/cmsis/Source/Templates
 CMSIS_MODULES = system_stm32f4xx.c gcc/startup_stm32f407xx.s
+CMSIS_INCL = $(STM32_PATH)/cmsis/Include
 CMSIS_SOURCES = $(addprefix $(CMSIS_PATH)/,$(CMSIS_MODULES))
 CMSIS_OBJECTS = $(addprefix $(BUILDDIR)/cmsis/,$(addsuffix .o,$(notdir $(basename $(CMSIS_SOURCES)))))
 
 HAL_PATH = $(STM32_PATH)/hal
 HAL_SRC = $(HAL_PATH)/Src
 HAL_INCL = $(HAL_PATH)/Inc
-HAL_MODULES = gpio.c rcc.c flash.c tim.c
+HAL_MODULES = gpio.c rcc.c flash.c tim.c cortex.c
 HAL_SOURCES = $(addprefix $(HAL_PATH)/stm32f4xx_hal_,$(HAL_MODULES))
 HAL_OBJECTS = $(addprefix $(BUILDDIR)/hal/,$(notdir $(HAL_SOURCES:.c=.o)))
 
@@ -94,10 +95,10 @@ AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
 COMPILE = $(CC) $(CFLAGS) -I$(CMSIS_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I.
 ASM = $(AS) -Wall
 
-OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
+OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
 
 # symbolic targets:
-@default:
+@default: all
 	@echo USB_SOURCES are $(USB_SOURCES)
 	@echo USB_OBJECTS are $(USB_OBJECTS)
 	@echo USBCDC_SRC is $(USBCDC_SRC)
