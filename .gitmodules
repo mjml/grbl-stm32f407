@@ -2,7 +2,7 @@
 	path = stm32f407/hal
 	url = https://github.com/STMicroelectronics/stm32f4xx_hal_driver.git
 [submodule "stm32f407/cmsis"]
-	path = stm32f407/cmsis
+	path = stm32f407/device
 	url = https://github.com/STMicroelectronics/cmsis_device_f4.git
 [submodule "stm32f407/usb"]
 	path = stm32f407/usb

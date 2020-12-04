@@ -56,11 +56,11 @@ CFLAGS=-DSTM32 -Wall -Os
 
 STM32_PATH = stm32f407
 
-CMSIS_PATH = $(STM32_PATH)/cmsis/Source/Templates
+CMSIS_PATH = $(STM32_PATH)/device
 CMSIS_MODULES = system_stm32f4xx.c gcc/startup_stm32f407xx.s
-CMSIS_INCL = $(STM32_PATH)/cmsis/Include
-CMSIS_SOURCES = $(addprefix $(CMSIS_PATH)/,$(CMSIS_MODULES))
-CMSIS_OBJECTS = $(addprefix $(BUILDDIR)/cmsis/,$(addsuffix .o,$(notdir $(basename $(CMSIS_SOURCES)))))
+CMSIS_INCL = $(CMSIS_PATH)/Include
+CMSIS_SOURCES = $(addprefix $(CMSIS_PATH)/Source/Templates/,$(CMSIS_MODULES))
+CMSIS_OBJECTS = $(addprefix $(BUILDDIR)/device/,$(addsuffix .o,$(notdir $(basename $(CMSIS_SOURCES)))))
 
 HAL_PATH = $(STM32_PATH)/hal
 HAL_SRC = $(HAL_PATH)/Src
@@ -89,8 +89,7 @@ USBIMPL_SOURCES = $(addprefix $(USBIMPL_PATH)/,$(USBCDC_MODULES))
 USBIMPL_OBJECTS = $(addprefix $(BUILDDIR)/usbimpl/,$(USBIMPL_MODULES:.c=.o)) 
 
 # Tune the lines below only if you know what you are doing:
-
-AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
+#AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
 
 # Compile flags for avr-gcc v4.8.1. Does not produce -flto warnings.
 # COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections
@@ -118,10 +117,10 @@ $(BUILDDIR)/%.o: $(SOURCEDIR)/%.c
 
 # These two CMSIS modules are special and are added explicitly. 
 # These need to be chosen to reflect the ARM architecture
-$(BUILDDIR)/cmsis/system_stm32f4xx.o: $(CMSIS_PATH)/system_stm32f4xx.c
+$(BUILDDIR)/device/system_stm32f4xx.o: $(CMSIS_PATH)/Source/Templates/system_stm32f4xx.c
 	$(COMPILE) -c $< -o $@
 
-$(BUILDDIR)/cmsis/startup_stm32f407xx.o: $(CMSIS_PATH)/gcc/startup_stm32f407xx.s
+$(BUILDDIR)/device/startup_stm32f407xx.o: $(CMSIS_PATH)/Source/Templates/gcc/startup_stm32f407xx.s
 	$(ASM) -c $< -o $@
 
 # Finally, the default rules for the stm32 imported submodules not covered by the above.
@@ -147,18 +146,18 @@ $(BUILDDIR)/usbimpl/%.o: $(USBIMPL_SRC)/%.c
 #.c.s:
 	$(COMPILE) -S $< -o $(BUILDDIR)/$@
 
-flash:	all
-	$(AVRDUDE) -U flash:w:grbl.hex:i
+#flash:	all
+#	$(AVRDUDE) -U flash:w:grbl.hex:i
 
-fuse:
-	$(AVRDUDE) $(FUSES)
+#fuse:
+#	$(AVRDUDE) $(FUSES)
 
 # Xcode uses the Makefile targets "", "clean" and "install"
-install: flash fuse
+#install: flash fuse
 
 # if you use a bootloader, change the command below appropriately:
-load: all
-	bootloadHID grbl.hex
+#load: all
+#	bootloadHID grbl.hex
 
 clean:
 	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf
