@@ -92,6 +92,7 @@ AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
 
 # Compile flags for avr-gcc v4.9.2 compatible with the IDE. Or if you don't care about the warnings. 
 #COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections -flto
+CFLAGS = -DSTM32F407xx
 COMPILE = $(CC) $(CFLAGS) -I$(CMSIS_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I.
 ASM = $(AS) -Wall
 

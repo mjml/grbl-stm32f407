@@ -53,7 +53,7 @@ COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sect
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
 
 # symbolic targets:
-all:	grbl.hex
+all:	grbl.hex stm32f407ze.a
 
 $(BUILDDIR)/%.o: $(SOURCEDIR)/%.c
 	$(COMPILE) -MMD -MP -c $< -o $@
@@ -94,6 +94,9 @@ grbl.hex: $(BUILDDIR)/main.elf
 	avr-size --format=berkeley $(BUILDDIR)/main.elf
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.
+
+stm32f407ze.a:
+	$(MAKE) -f Makefile.stm32
 
 # Targets for code debugging and analysis:
 disasm:	main.elf
