@@ -168,19 +168,6 @@ $(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
 .c.s:
 	$(COMPILE) -S $< -o $(BUILDDIR)/$@
 
-#flash:	all
-#	$(AVRDUDE) -U flash:w:grbl.hex:i
-
-#fuse:
-#	$(AVRDUDE) $(FUSES)
-
-# Xcode uses the Makefile targets "", "clean" and "install"
-#install: flash fuse
-
-# if you use a bootloader, change the command below appropriately:
-#load: all
-#	bootloadHID grbl.hex
-
 clean:
 	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf
 
@@ -196,7 +183,7 @@ grbl.hex: $(BUILDDIR)/main.elf
 # EEPROM and add it to the "flash" target.
 
 # Targets for code debugging and analysis:
-disasm:	main.elf
+disasm:	$(BUILDDIR)/main.elf
 	$(OBJDUMP) -d $(BUILDDIR)/main.elf
 
 cpp:
