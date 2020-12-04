@@ -1,4 +1,4 @@
-* Figure out which package the CMSIS core_cm4.h header file comes from and ensure that it's in the include path.
+* Author stm32f4xx_hal_conf.h
 
 * Read and understand the Makefile and figure out how to add the STM32 USB/CDC modules to the build
 
@@ -16,3 +16,4 @@
 * Inspect grbl's "prediction/anticipation" code to see if encoder outputs can be tied in,
    putting grbl directly into each stepper's control loop.
 
+* Encoder / Pulse tracking: ratio-weighted algorithm using velocity and latency matching
