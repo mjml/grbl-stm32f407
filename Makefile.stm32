@@ -74,14 +74,19 @@ USB_SRC = $(USB_PATH)/Core/Src
 USB_INCL = $(USB_PATH)/Core/Inc
 USB_MODULES = usbd_core.c usbd_ctlreq.c usbd_ioreq.c
 USB_SOURCES = $(addprefix $(USB_SRC)/,$(USB_MODULES))
-USB_OBJECTS = $(addprefix $(BUILDDIR)/usb/,$(notdir $(USB_SOURCES:.c=.o))) $(BUILDDIR)/impl/usbd_conf.o $(BUILDDIR)/impl/usbd_desc.o
+USB_OBJECTS = $(addprefix $(BUILDDIR)/usb/,$(notdir $(USB_SOURCES:.c=.o))) 
 
 USBCDC_PATH = $(USB_PATH)/Class/CDC
 USBCDC_SRC = $(USBCDC_PATH)/Src
 USBCDC_INCL = $(USBCDC_PATH)/Inc
 USBCDC_MODULES = usbd_cdc.c
 USBCDC_SOURCES = $(addprefix $(USBCDC_SRC)/,$(USBCDC_MODULES))
-USBCDC_OBJECTS = $(addprefix $(BUILDDIR)/usbcdc/,$(notdir $(USBCDC_MODULES:.c=.o))) $(BUILDDIR)/impl/usbd_cdc_if.o
+USBCDC_OBJECTS = $(addprefix $(BUILDDIR)/usbcdc/,$(notdir $(USBCDC_MODULES:.c=.o))) 
+
+USBIMPL_PATH = $(STM32_PATH)/usbimpl
+USBIMPL_MODULES = usbd_conf.c usbd_desc.c usbd_cdc_if.c
+USBIMPL_SOURCES = $(addprefix $(USBIMPL_PATH)/,$(USBCDC_MODULES))
+USBIMPL_OBJECTS = $(addprefix $(BUILDDIR)/usbimpl/,$(USBIMPL_MODULES:.c=.o)) 
 
 # Tune the lines below only if you know what you are doing:
 
@@ -96,7 +101,7 @@ CFLAGS = -DSTM32F407xx
 COMPILE = $(CC) $(CFLAGS) -I$(CMSIS_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I.
 ASM = $(AS) -Wall
 
-OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
+OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) $(USBIMPL_OBJECTS)
 
 # symbolic targets:
 @default: all
@@ -119,20 +124,6 @@ $(BUILDDIR)/cmsis/system_stm32f4xx.o: $(CMSIS_PATH)/system_stm32f4xx.c
 $(BUILDDIR)/cmsis/startup_stm32f407xx.o: $(CMSIS_PATH)/gcc/startup_stm32f407xx.s
 	$(ASM) -c $< -o $@
 
-$(BUILDDIR)/hal/%.o: $(HAL)/%.c
-	$(COMPILE) -c $< -o $@
-
-# These three USB modules are built from template examples provided by the USB and USB/CDC middleware sourcetree.
-# I want them to go with the middleware objects, so they need their own explicit rules to override the implicit ones to follow.
-$(BUILDDIR)/impl/usbd_conf.o: $(STM32_PATH)/impl/usbd_conf.c $(USB_SRC)/usbd_conf_template.c
-	$(COMPILE) -c $< -o $@
-
-$(BUILDDIR)/impl/usbd_desc.o: $(STM32_PATH)/impl/usbd_desc.c $(USB_SRC)/usbd_desc_template.c
-	$(COMPILE) -c $< -o $@
-
-$(BUILDDIR)/impl/usbd_cdc_if.o: $(STM32_PATH)/impl/usbd_cdc_if.c $(USBCDC_SRC)/usbd_cdc_if_template.c
-	$(COMPILE) -c $< -o $@
-
 # Finally, the default rules for the stm32 imported submodules not covered by the above.
 $(BUILDDIR)/hal/%.o: $(HAL_SRC)/%.c
 	$(COMPILE) -c $< -o $@
@@ -141,6 +132,9 @@ $(BUILDDIR)/usb/%.o: $(USB_SRC)/%.c
 	$(COMPILE) -c $< -o $@
 
 $(BUILDDIR)/usbcdc/%.o: $(USBCDC_SRC)/%.c
+	$(COMPILE) -c $< -o $@
+
+$(BUILDDIR)/usbimpl/%.o: $(USBIMPL_SRC)/%.c
 	$(COMPILE) -c $< -o $@
 
 .S.o:
