@@ -35,7 +35,9 @@ SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c 
              protocol.c stepper.c eeprom.c settings.c planner.c nuts_bolts.c limits.c jog.c\
              print.c probe.c report.c system.c
 BUILDDIR = build
-SOURCEDIR = grbl
+GRBL_PATH = grbl
+OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
+
 
 OBJDUMP=arm-none-eabi-objdump
 OBJCOPY=arm-none-eabi-objcopy
@@ -87,7 +89,9 @@ USBCDC_SOURCES = $(addprefix $(USBCDC_SRC)/,$(USBCDC_MODULES))
 USBCDC_OBJECTS = $(addprefix $(BUILDDIR)/usbcdc/,$(notdir $(USBCDC_MODULES:.c=.o))) 
 
 USBIMPL_PATH = $(STM32_PATH)/usbimpl
-USBIMPL_MODULES = usbd_conf.c usbd_desc.c usbd_cdc_if.c
+USBIMPL_SRC = $(USBIMPL_PATH)
+USBIMPL_INCL = $(USBIMPL_PATH)
+USBIMPL_MODULES = usbd_conf.c usbd_desc.c usbd_cdc_if.c usb_device.c
 USBIMPL_SOURCES = $(addprefix $(USBIMPL_PATH)/,$(USBCDC_MODULES))
 USBIMPL_OBJECTS = $(addprefix $(BUILDDIR)/usbimpl/,$(USBIMPL_MODULES:.c=.o)) 
 
@@ -98,7 +102,7 @@ USBIMPL_OBJECTS = $(addprefix $(BUILDDIR)/usbimpl/,$(USBIMPL_MODULES:.c=.o))
 
 # Compile flags for avr-gcc v4.9.2 compatible with the IDE. Or if you don't care about the warnings. 
 # COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections -flto
-COMPILE = $(CC) $(CFLAGS) -I$(STM32_INCL) -I$(CMSIS_ARM_INCL) -I$(CMSIS_DEVICE_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL)
+COMPILE = $(CC) $(CFLAGS) -I$(STM32_INCL) -I$(CMSIS_ARM_INCL) -I$(CMSIS_DEVICE_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I$(USBIMPL_INCL)
 ASM = $(AS) -Wall
 
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) $(USBIMPL_OBJECTS)
@@ -112,9 +116,6 @@ OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $
 	@echo USBCDC_OBJECTS are $(USBCDC_OBJECTS)
 
 all:	grbl.hex
-
-$(BUILDDIR)/%.o: $(SOURCEDIR)/%.c
-	$(COMPILE) -MMD -MP -c $< -o $@
 
 # These two CMSIS modules are special and are added explicitly. 
 # These need to be chosen to reflect the ARM architecture
@@ -149,7 +150,13 @@ $(BUILDDIR)/usbimpl/%.o: $(USBIMPL_SRC)/%.c $(BUILDDIR)/usbimpl
 $(BUILDDIR)/usbimpl:
 	mkdir -p $@
 
+# This one's for stm32 core files
+$(BUILDDIR)/%.o: $(STM32_PATH)/%.c
+	$(COMPILE) -c $< -o $@
 
+# And this one's for the original grbl files
+$(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
+	$(COMPILE) -c $< -o $@
 
 .S.o:
 	$(COMPILE) -x assembler-with-cpp -c $< -o $(BUILDDIR)/$@
@@ -158,7 +165,7 @@ $(BUILDDIR)/usbimpl:
 # characters are not always preserved on Windows. To ensure WinAVR
 # compatibility define the file type manually.
 
-#.c.s:
+.c.s:
 	$(COMPILE) -S $< -o $(BUILDDIR)/$@
 
 #flash:	all
@@ -196,4 +203,4 @@ cpp:
 	$(COMPILE) -E $(SOURCEDIR)/main.c
 
 # include generated header dependencies
--include $(BUILDDIR)/$(OBJECTS:.o=.d)
+#-include $(BUILDDIR)/$(OBJECTS:.o=.d)
