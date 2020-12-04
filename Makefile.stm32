@@ -55,6 +55,10 @@ CFLAGS=-DSTM32 -Wall -Os
 # USB_CDC (the CDC device profile)
 
 STM32_PATH = stm32f407
+STM32_SRC = $(STM32_PATH)
+STM32_INCL = $(STM32_PATH)
+STM32_MODULES = stm32f4xx_hal_msp.c stm32f4xx_it.c syscalls.c sysmem.c system_stm32f4xx.c
+STM32_OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(STM32_MODULES:.c=.o)))
 
 CMSIS_ARM_PATH = $(STM32_PATH)/cmsis
 CMSIS_ARM_INCL = $(CMSIS_ARM_PATH)/Include
@@ -100,7 +104,7 @@ USBIMPL_OBJECTS = $(addprefix $(BUILDDIR)/usbimpl/,$(USBIMPL_MODULES:.c=.o))
 # Compile flags for avr-gcc v4.9.2 compatible with the IDE. Or if you don't care about the warnings. 
 #COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections -flto
 CFLAGS = -DSTM32F407xx
-COMPILE = $(CC) $(CFLAGS) -I$(CMSIS_ARM_INCL) -I$(CMSIS_DEVICE_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I.
+COMPILE = $(CC) $(CFLAGS) -I$(STM32_INCL) -I$(CMSIS_ARM_INCL) -I$(CMSIS_DEVICE_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I.
 ASM = $(AS) -Wall
 
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) $(USBIMPL_OBJECTS)
