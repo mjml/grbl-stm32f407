@@ -1,6 +1,8 @@
-* Author stm32f4xx_hal_conf.h
+============
+### TODO ###
+============
 
-* Read and understand the Makefile and figure out how to add the STM32 USB/CDC modules to the build
+* Study the EEPROM code and convert it to use the STM32's flash memory subsystem
 
 * Determine whether the skeleton USB/CDC files are sufficient for this application
 
@@ -17,3 +19,15 @@
    putting grbl directly into each stepper's control loop.
 
 * Encoder / Pulse tracking: ratio-weighted algorithm using velocity and latency matching
+
+
+========================
+### DONE / CHANGELOG ###
+========================
+
+* Separate Makefile called Makefile.stm32 for STM32 builds. Styled after the original Makefile which is untouched.
+
+* STM32 files are all located under the stm32f407 directory.
+
+* #if preprocessor directives used to select between AVR and STM32 builds.
+
