@@ -1,0 +1,190 @@
+PD000: Parameter lock
+Factory: 0
+Desired: 0
+
+PD001: Source of commands
+Factory: 0
+Factory: ?
+Desired: 1 (External Terminal / Multi-input pins)
+
+
+PD002: Source of operating frequency
+Factory: 0
+Factory: ?
+Desired: 1 (External Terminal / VI / AI)
+         Signal type determined by PD070
+Notes: net claims that Shapeoko uses a PWM signal for this.
+       Don't forget to use a nice mica capacitor to filter it.         
+
+PD003: Main frequency
+Factory: 50 or 0
+Factory: ?
+Desired: 100 (6000 rpm)
+Notes: The speed will be set by VI, but I set this to 6krpm so that the spindle obtains
+       this distinctively low speed if the VI circuitry and setting is being ignored 
+       (in favour of this setting for some reason).
+       This value is also "safe" for all spindles according to various internet testimonies.
+         
+PD004: Base frequency
+Factory: 50
+Factory: ?
+Desired: 400
+Notes: supported by spindle motor, also internet claims
+
+PD005: Max. operating frequency
+Factory: 50
+Factory: ?
+Desired: 400
+
+PD006: Intermediate frequency
+Factory: 2.50 
+Desired: 80
+Notes: This midpoint provides predictable linear performance over the upper part
+       of the instrumentation / power output range. 
+       At 220V = m * 400Hz, (m=0.55V/Hz), the midpoint is 44V = m * 80Hz
+       
+PD007: Min frequency
+Factory: 0.5
+Desired: 0.5
+Notes: At this setting, we'd be applying 22V using the linear scale.
+       I bump this up to 25V below.
+       I suppose this setting might be useful for large diameter bits/mills on wood.
+
+PD008: Max voltage
+Factory: 220V/380V
+Desired: 220V 
+
+PD009: Intermediate voltage
+Factory: 21 (range is 0.15-100V ?)
+Desired: 50
+
+PD010: Min. voltage
+Factory: 10.5
+Desired: 10.5
+
+PD011: Frequency lower limit (safety limit?)
+Factory: 100
+Notes: This is 25% power, or 55V. At maximum cut-off current of 7A,
+       this would produce 385W of power. I think this is sufficient for "small"
+       stainless steel jobs.
+
+PD013: Parameter reset
+Factory: 0
+Desired: 0
+Note: set to 1 for abnormal parameter detected
+
+PD014: Accel time 1
+Factory: 15
+Desired: 4
+Note: Since I'm not using heavy bits nor starting the bit in stock, 
+      a shorter ramp-up time is fine.
+      Also: carbide3d posting used this with a 220V spindle
+
+PD015: Decel time 1
+Factory: 15
+Desired: 6
+Note: As above.
+
+PD016-PD021: are repetitions of 014 and 015 for 3 other different numbered profiles (2,3,4)
+PD022: Reserved
+
+PD023: Rev rotation select
+Factory: 0
+Desired: 0
+Note: Allow reverse rotation of the motor
+
+PD024: STOP key
+Factory: 1
+Desired: 1
+Note: Stop key on the front panel is valid.
+
+PD025: Starting mode
+Factory: 0
+Desired: 1
+Note: Do not apply DC braking to start -- track starting frequency in case of a "hot start"
+
+PD026: Stopping mode
+Factory: 0
+Desired: 0
+Note: Use DC braking once the stopping frequency has been attained.
+      Make sure to connect the braking resistor!
+      
+PD028: Starting frequency
+Factory: 0.5
+Desired: 0.5
+
+PD029: DC Braking time at start
+Factory: 0.0
+Desired: 0.0 (not applicable since PD025=1)
+
+PD030: DC Braking time at stop
+Factory: 2.0
+Desired: 2.0
+
+PD031: DC Braking voltage level
+Factory: 2.0%
+Desired: 2.0%
+Notes: I'd like to experiment with higher values. The default seems low (control freq of 8Hz)
+
+PD032: Frequency track time
+Factory: 5.0
+Desired: 3.0
+Notes: I think 3.0s should be sufficient.
+
+PD033: Current level for frequency track
+Factory: 150
+Note: I think this is an overcurrent threshold for when the detected current is larger
+      than what the control frequency should dictate. When exceeded,
+      the VFD will scale back the control frequency.
+      I just leave this at default.
+
+PD034: Inverter track time 
+Factory: 0.5
+Note: I found this to be confusing and am leaving it at default.
+      A higher setting is supposed to account for high power machines which need to be tracked
+      at a higher "up" voltage (?).
+
+PD035: Reserved
+
+PD041: Carrier frequency
+Factory: 5 (4kHz)
+Desired: 5 to start, I will experiment with a higher value later.
+Note: Since I'm powering a 1.5kW spindle with a 2.2kW ac drive, I should be able to accomodate
+      the heat / stress on the drive due to a higher frequency. 
+      Recall that this line of VFDs goes down to 400W.
+      Note: cnczone peeps have tried 
+      
+PD042: Jogging frequency
+Factory: 5.0
+Desired: 5.0
+Note: I'm not sure I'd even use this. Might be useful for cleaning the bit. 
+      Leaving it at default
+      
+PD043: S-Curve time
+Factory: 1.0
+Desired: 6
+
+## Multi-input function definitions
+## I'm not sure what the last three defaults do.
+## Some of the default values over 16 are confusing to me.
+
+PD044: FOR(D1) function
+Factory: 02 (forward rotation)
+
+PD045: REV(D2) function
+Factory: 03 (reverse rotation)
+
+PD046: RST(D3) function
+Factory: 04 (stop)
+
+PD047: SPH(D4) function
+Factory: 07 (Jog forward)
+
+PDF048: SPM(D5) function
+Factory: 19 (Multi-speed 1)
+
+PDF049: SPL(C6) function
+Factory: 20 (Multi-speed 2)
+
+
+
