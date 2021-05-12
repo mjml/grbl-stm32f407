@@ -189,5 +189,5 @@ disasm:	$(BUILDDIR)/main.elf
 cpp:
 	$(COMPILE) -E $(SOURCEDIR)/main.c
 
-# include generated header dependencies
+# TODO: include generated header dependencies
 #-include $(BUILDDIR)/$(OBJECTS:.o=.d)
