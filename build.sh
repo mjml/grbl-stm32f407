@@ -1,3 +1,3 @@
 #!/bin/bash
 
-make -j -f Makefile.stm32
+make -j -f stm32.Makefile $@
