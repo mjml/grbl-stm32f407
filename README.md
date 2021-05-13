@@ -6,6 +6,6 @@ Running at 168MHz, it will provide faster pulse rates to work with larger Leadsh
 
 It will also allow me to add facilities for an ATC spindle, customizable lighting, and maybe a speaker for audible alerts during jobs.
 
-If you're interested, I'll be blogging about it on my website at http://www.michaeljoya.com/
+I'm blogging the details on my website at http://www.michaeljoya.com/
 
 ![System Architecture](/doc/SystemWiring.svg)
