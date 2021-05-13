@@ -8,3 +8,4 @@ It will also allow me to add facilities for an ATC spindle, customizable lightin
 
 If you're interested, I'll be blogging about it on my website at http://www.michaeljoya.com/
 
+![System Architecture](/doc/SystemWiring.svg)
