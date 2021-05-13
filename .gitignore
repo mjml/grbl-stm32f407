@@ -3,6 +3,9 @@
 *.elf
 *.DS_Store
 *.d
+*.sch-bak
 .vscode
 vscode.code-workspace
 README.md
+fp-info-cache
+build.log
