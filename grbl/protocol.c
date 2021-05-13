@@ -163,6 +163,16 @@ void protocol_main_loop()
   return; /* Never reached */
 }
 
+#ifdef STM32
+/**
+ * STM32 has its input fed upward from HAL handlers.
+ */
+void stm32_parse_input ()
+{
+
+
+}
+#endif
 
 // Block until all buffered steps are executed or in a cycle state. Works with feed hold
 // during a synchronize call, if it should happen. Also, waits for clean cycle end.
