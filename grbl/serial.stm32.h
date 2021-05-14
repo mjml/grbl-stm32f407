@@ -75,6 +75,8 @@ struct txbuf_t {
 
 extern struct txbuf_t txbuf[2];
 
+uint8_t rxbuf_is_readable (struct rxbuf_t* pbuf);
+
 void serial_init();
 
 // Writes one byte to the TX serial buffer. Called by main program.

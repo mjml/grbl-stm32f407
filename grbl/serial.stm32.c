@@ -42,7 +42,8 @@ USBD_CDC_LineCodingTypeDef linecoding = {
   0x08
 };
 
-void init_txbufs () {
+void init_txbufs () 
+{
   curtx=0;
   for (int i=0; i<2; i++) {
     txbuf[i].pos = 0;
@@ -50,7 +51,8 @@ void init_txbufs () {
   }
 }
 
-void init_rxbufs () {
+void init_rxbufs () 
+{
   for (int i=0; i<RX_RING_SIZE; i++) {
     rxbuf[i].mode = 0;
     rxbuf[i].len = 0;
@@ -62,25 +64,48 @@ void init_rxbufs () {
 }
 
 
-void flip_txbuf() {
+void flip_txbuf() 
+{
   curtx = (curtx+1) % 2;
+}
+
+uint8_t is_delim (uint8_t b) {
+  return b=='\n' || b=='\r' || b==0;
+}
+
+uint8_t* find_delim (uint8_t* buf, int len) 
+{
+  for (int i=0; i < len; i++) {
+    if (is_delim(buf[i])) {
+      return buf+i;
+    }
+  }
+  return 0;
+
 }
 
 
 // Prepares rxhead so that the CDC read buffer can be set, returns 0 if successful or 1 if blocked.
 // Will set rxblock accordingly.
-uint8_t get_unused_rxbufs() {
+uint8_t get_unused_rxbufs() 
+{
   int usedblocks = (rxhead>=rxtail) ? rxhead-rxtail : rxhead-rxtail+RX_RING_SIZE;
   return RX_RING_SIZE - usedblocks;
 }
 
-uint8_t get_all_rxbufs_incomplete() {
+uint8_t get_all_rxbufs_incomplete() 
+{
   for (int i=rxtail; i != rxhead; i=(i+1)%RX_RING_SIZE) {
     if (rxbuf[i].mode != RXBUF_MODE_INCOMPLETE) {
       return false;
     }
   }
   return true;
+}
+
+uint8_t rxbuf_is_readable (struct rxbuf_t* pbuf)
+{
+  return pbuf->mode == RXBUF_MODE_COMPLETE || pbuf->mode == RXBUF_MODE_PARTIAL;
 }
 
 // Returns the number of bytes available in the RX serial buffer.
@@ -148,11 +173,10 @@ void serial_write(uint8_t data) {
     // queue the finished buffer for sending
     USBD_CDC_SetTxBuffer(&hUsbDeviceFS, txbuf[curtx].buf, txbuf[curtx].pos);
 
-    // flip to the alternate buffer
+    // check if we can flip to the alternate buffer, then do so
+    int alttx = (curtx+1)%2;
+    while (!txbuf[alttx].avail) {}
     flip_txbuf();
-
-    // spinlock until the alternate buffer is available
-    while (!txbuf[curtx].avail) { }
 
   }
 }
@@ -364,15 +388,62 @@ int8_t serial_recv_cb(uint8_t* pbuf, uint32_t *Len)
   rxbuf[rxhead].len += *Len;
 
   // Update the status of the head rxbuf
-  uint8_t complete = pbuf[*Len-1] == '\n';
-  uint8_t contains_nl = strstr((const char*)pbuf, "\n") != NULL;
+  uint8_t complete = is_delim(pbuf[*Len-1]);
+  uint8_t* contains_delim = find_delim(pbuf, *Len);
   uint8_t partial = rxbuf[rxhead].mode == RXBUF_MODE_PARTIAL;
   if (complete) {
     rxbuf[rxhead].mode = RXBUF_MODE_COMPLETE;
-  } else if (partial || contains_nl) {
+  } else if (partial || contains_delim) {
     rxbuf[rxhead].mode = RXBUF_MODE_PARTIAL;
   } else {
     rxbuf[rxhead].mode = RXBUF_MODE_INCOMPLETE;
+  }
+
+  /* Pick off realtime characters from the incoming USB stream.   
+     In the STM32 implementation, we act on these here in the interrupt callback just as in AVR,
+       but we leave them in the buffer and implement a preprocessor in protocol.c that will remove them before execution.
+  */
+  for (int i=0; i < *Len; i++) {
+    uint8_t data = pbuf[*Len];
+    switch(data) {
+      case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
+      case CMD_STATUS_REPORT: system_set_exec_state_flag(EXEC_STATUS_REPORT); break; // Set as true
+      case CMD_CYCLE_START:   system_set_exec_state_flag(EXEC_CYCLE_START); break; // Set as true
+      case CMD_FEED_HOLD:     system_set_exec_state_flag(EXEC_FEED_HOLD); break; // Set as true
+      default :
+        if (data > 0x7F) { // Real-time control characters are extended ACSII only.
+          switch(data) {
+            case CMD_SAFETY_DOOR:   system_set_exec_state_flag(EXEC_SAFETY_DOOR); break; // Set as true
+            case CMD_JOG_CANCEL:   
+              if (sys.state & STATE_JOG) { // Block all other states from invoking motion cancel.
+                system_set_exec_state_flag(EXEC_MOTION_CANCEL); 
+              }
+              break; 
+            #ifdef DEBUG
+              case CMD_DEBUG_REPORT: {uint8_t sreg = SREG; cli(); bit_true(sys_rt_exec_debug,EXEC_DEBUG_REPORT); SREG = sreg;} break;
+            #endif
+            case CMD_FEED_OVR_RESET: system_set_exec_motion_override_flag(EXEC_FEED_OVR_RESET); break;
+            case CMD_FEED_OVR_COARSE_PLUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_COARSE_PLUS); break;
+            case CMD_FEED_OVR_COARSE_MINUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_COARSE_MINUS); break;
+            case CMD_FEED_OVR_FINE_PLUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_FINE_PLUS); break;
+            case CMD_FEED_OVR_FINE_MINUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_FINE_MINUS); break;
+            case CMD_RAPID_OVR_RESET: system_set_exec_motion_override_flag(EXEC_RAPID_OVR_RESET); break;
+            case CMD_RAPID_OVR_MEDIUM: system_set_exec_motion_override_flag(EXEC_RAPID_OVR_MEDIUM); break;
+            case CMD_RAPID_OVR_LOW: system_set_exec_motion_override_flag(EXEC_RAPID_OVR_LOW); break;
+            case CMD_SPINDLE_OVR_RESET: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_RESET); break;
+            case CMD_SPINDLE_OVR_COARSE_PLUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_COARSE_PLUS); break;
+            case CMD_SPINDLE_OVR_COARSE_MINUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_COARSE_MINUS); break;
+            case CMD_SPINDLE_OVR_FINE_PLUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_FINE_PLUS); break;
+            case CMD_SPINDLE_OVR_FINE_MINUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_FINE_MINUS); break;
+            case CMD_SPINDLE_OVR_STOP: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_STOP); break;
+            case CMD_COOLANT_FLOOD_OVR_TOGGLE: system_set_exec_accessory_override_flag(EXEC_COOLANT_FLOOD_OVR_TOGGLE); break;
+            #ifdef ENABLE_M7
+              case CMD_COOLANT_MIST_OVR_TOGGLE: system_set_exec_accessory_override_flag(EXEC_COOLANT_MIST_OVR_TOGGLE); break;
+            #endif
+          }
+          // Throw away any unfound extended-ASCII character by not passing it to the serial buffer.
+        }     
+    }
   }
 
   // Determine whether we have room for the next packet or if we are blocked
@@ -398,9 +469,7 @@ int8_t serial_recv_cb(uint8_t* pbuf, uint32_t *Len)
     } else {
       rxblocked = true;
     }
-  } else { 
-    // We still have space in the current input block and it is partial or incomplete
-  }
+  } 
 
   // If we're blocked, don't put the hardware back in receive mode until the parser has consumed some of the consuming/incomplete lines
   if (!rxblocked) {

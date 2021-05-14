@@ -79,7 +79,11 @@
 #include "probe.h"
 #include "protocol.h"
 #include "report.h"
+#ifdef AVR
 #include "serial.h"
+#elif STM32
+#include "serial.stm32.h"
+#endif
 #include "spindle_control.h"
 #include "stepper.h"
 #include "jog.h"

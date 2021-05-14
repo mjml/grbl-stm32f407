@@ -26,12 +26,16 @@
 #define LINE_FLAG_COMMENT_PARENTHESES bit(1)
 #define LINE_FLAG_COMMENT_SEMICOLON bit(2)
 
-
+#ifdef AVR
 static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
+#elif STM32
+static char* line = NULL;
+#endif
 
 static void protocol_exec_rt_suspend();
+void protocol_preprocess_line (char* line);
 
-
+#ifdef AVR
 /*
   GRBL PRIMARY LOOP:
 */
@@ -162,14 +166,107 @@ void protocol_main_loop()
 
   return; /* Never reached */
 }
-
-#ifdef STM32
+#elif STM32
 /**
  * STM32 has its input fed upward from HAL handlers.
  */
-void stm32_parse_input ()
+void protocol_main_loop ()
 {
+  // Perform some machine checks to make sure everything is good to go.
+  #ifdef CHECK_LIMITS_AT_INIT
+    if (bit_istrue(settings.flags, BITFLAG_HARD_LIMIT_ENABLE)) {
+      if (limits_get_state()) {
+        sys.state = STATE_ALARM; // Ensure alarm state is active.
+        report_feedback_message(MESSAGE_CHECK_LIMITS);
+      }
+    }
+  #endif
+  // Check for and report alarm state after a reset, error, or an initial power up.
+  // NOTE: Sleep mode disables the stepper drivers and position can't be guaranteed.
+  // Re-initialize the sleep state as an ALARM mode to ensure user homes or acknowledges.
+  if (sys.state & (STATE_ALARM | STATE_SLEEP)) {
+    report_feedback_message(MESSAGE_ALARM_LOCK);
+    sys.state = STATE_ALARM; // Ensure alarm state is set.
+  } else {
+    // Check if the safety door is open.
+    sys.state = STATE_IDLE;
+    if (system_check_safety_door_ajar()) {
+      bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
+      protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
+    }
+    // All systems go!
+    system_execute_startup(line); // Execute startup script.
+  }
 
+  while (1) {
+
+    protocol_execute_realtime();
+
+    if (sys.abort) { return; }
+
+    // Check for input overflow, a critical exception
+    if (rxoverflow) {
+      report_status_message(STATUS_OVERFLOW);
+      serial_init();
+    } 
+    
+    // Check for readable input
+    if (rxbuf_is_readable(&rxbuf[rxtail])) {
+      line = (char*)(rxbuf[rxtail].buf + rxbuf[rxtail].pos);
+      const char* end = (const char*) rxbuf[rxtail].buf + rxbuf[rxtail].len; 
+      int len = end-line;
+      if (end != NULL) {
+        // In the STM32 version, we need to preprocess this line and delete some of the "realtime command" characters.
+        protocol_preprocess_line(line);
+        if (line[0] == 0) {
+          report_status_message(STATUS_OK);
+          rxbuf[rxtail].pos++;
+        } else if (line[0] == '$') {
+          // interpret as realtime command
+          report_status_message(system_execute_line(line));
+          rxbuf[rxtail].pos += (len+1);
+        } else if (sys.state & (STATE_ALARM | STATE_JOG)) {
+          // block if in alarm or jog mode
+          report_status_message(STATUS_SYSTEM_GC_LOCK);
+        } else {
+          // interpret as standard text command
+          report_status_message(gc_execute_line(line));
+          rxbuf[rxtail].pos += (len+1);
+        }
+      }
+    }
+
+  }
+
+}
+
+
+// Filter out the "realtime" characters that would be processed by the serial module's receive callback and processed in the interrupt.
+void protocol_preprocess_line (char* line)
+{
+  char* tgt=line;
+  char* src=line;
+  
+  do {
+    uint8_t c = *src;
+    if (c == CMD_RESET ||
+        c == CMD_STATUS_REPORT ||
+        c == CMD_CYCLE_START ||
+        c == CMD_FEED_HOLD ||
+        c > 0x7f) {
+          // ignore these
+          src++;
+        } else if (c=='\n' || c=='\r') {
+          *tgt = 0;
+          tgt++;
+          src++;
+          break;
+        } else {
+          *tgt = *src;
+          tgt++;
+          src++;
+        }
+    } while(1);
 
 }
 #endif
