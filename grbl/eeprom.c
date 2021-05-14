@@ -21,8 +21,19 @@
 *                         $Revision: 1.6 $
 *                         $Date: Friday, February 11, 2005 07:16:44 UTC $
 ****************************************************************************/
+
+#if defined(__AVR__)
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#elif defined(STM32)
+#include <stm32f4xx_hal_flash.h>
+#else
+#error "AVR or STM32/ARM only."
+#endif
+
+
+
+#if defined(__AVR__)
 
 /* These EEPROM bits have different names on different devices. */
 #ifndef EEPE
@@ -36,7 +47,7 @@
 
 /* Define to reduce code size. */
 #define EEPROM_IGNORE_SELFPROG //!< Remove SPM flag polling.
-
+ 
 /*! \brief  Read byte from EEPROM.
  *
  *  This function reads one byte from a given EEPROM address.
@@ -147,5 +158,38 @@ int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, uns
   }
   return(checksum == eeprom_get_char(source));
 }
+
+#elif defined(STM32)
+
+unsigned char eeprom_get_char(unsigned int addr)
+{
+	// TODO
+	return 0;
+}
+
+
+void eeprom_put_char(unsigned int addr, unsigned char new_value)
+{
+	// TODO
+
+}
+
+
+void memcpy_to_eeprom_with_checksum(unsigned int destination, char *source, unsigned int size)
+{
+	// TODO
+
+}
+
+
+int memcpy_from_eeprom_with_checksum(char *destination, unsigned int source, unsigned int size)
+{
+	// TODO
+	unsigned char checksum = 0;
+	return(checksum == eeprom_get_char(source));
+}
+
+
+#endif
 
 // end of file
