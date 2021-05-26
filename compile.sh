@@ -5,9 +5,14 @@
 
 srcfile=$1
 
+# We have to mimic the placement strategy of the Makefile a bit here:
 if [[ $srcfile =~ ^grbl ]]; then
 		srcfile=${srcfile#*grbl/}
 fi
+if [[ $srcfile =~ ^stm32f407 ]]; then
+		srcfile=${srcfile#*stm32f407/}
+fi
+
 if [[ $srcfile =~ .*\.c ]]; then
 		tgtfile=build/${srcfile%.c}.o
 elif [[ $srcfile =~ .*\.h ]]; then
