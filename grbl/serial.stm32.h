@@ -22,6 +22,8 @@
 #ifndef serial_stm32_h
 #define serial_stm32_h
 
+#include <stdbool.h>
+
 
 #ifndef RX_BUFFER_SIZE
   #define RX_BUFFER_SIZE 251
@@ -44,12 +46,14 @@
 #define SERIAL_NO_DATA 0xff
 
 enum rxbuf_mode {
-  RXBUF_MODE_UNUSED,     // block is unused and ready for producing
-  RXBUF_MODE_PRODUCING,  // block is being used to write incoming data
-  RXBUF_MODE_INCOMPLETE, // block is no longer used to write incoming data, consists of an incomplete line
-  RXBUF_MODE_PARTIAL,    // block is no longer used to write incoming data, has complete line(s), but ends with an incomplete line
-  RXBUF_MODE_COMPLETE    // block is no longer used to write incoming data, consists only of complete lines
+  RXBUF_MODE_UNUSED = 0,     // block is unused and ready for producing
+  RXBUF_MODE_PRODUCING = 1,  // block is being used to write incoming data
+  RXBUF_MODE_INCOMPLETE = 2, // block is no longer used to write incoming data, consists of an incomplete line
+  RXBUF_MODE_PARTIAL = 8,    // block is no longer used to write incoming data, has completed line(s), but ends with an incomplete line
+  RXBUF_MODE_COMPLETE = 9    // block is no longer used to write incoming data, consists only of complete lines
 };
+
+#define RXBUF_FLAG_COMPLETED   0x03
 
 struct rxbuf_t {
   uint8_t  mode; // 0:unused 1:producing 2:consuming
@@ -63,8 +67,9 @@ struct rxbuf_t {
 extern struct rxbuf_t rxbuf[RX_RING_SIZE];
 extern int rxhead; 
 extern int rxtail; 
-extern int rxblocked;
-extern int rxoverflow;
+extern int curtx;
+extern bool rxblocked;
+extern bool rxoverflow;
 
 struct txbuf_t {
   uint16_t pos;
@@ -77,7 +82,34 @@ extern struct txbuf_t txbuf[2];
 
 uint8_t rxbuf_is_readable (struct rxbuf_t* pbuf);
 
+// Bit 3 of the mode field (0x08) tells whether the rxbuf (from its current read position) is completed.
+// Precondition: the USB interrupt should be disabled while calling this function.
+bool rxbuf_is_completed (struct rxbuf_t* pbuf);
+
+// Advance one byte in the receive buffer, across rxbuf blocks if needed
+// CAUTION: There is no mode validation or checking beyond simple array bounds
+//          Caller is responsible for setting up preconditions!
+uint8_t rx_advance_char();
+
+// Returns the current receive buffer byte
+// CAUTION: There is no mode validation or checking beyond simple rxbuf array length
+//          Caller is responsible for setting up preconditions!
+uint8_t rx_cur_char();
+
+// Peeks at the next byte without advancing to it
+// CAUTION: There is no mode validation or checking beyond simple rxbuf array length
+//          Caller is responsible for setting up preconditions!
+uint8_t rx_peek();
+
+// Copies a complete command from one or more rxbuf fragments into an arbitrary array.
+// Returns the number of characters copied, which should always be at least one.
+// Should be preconditioned by (serial_has_complete_command() == true).
+int rx_copy(uint8_t* buf, int maxsz);
+
 void serial_init();
+
+// Returns true if there is a complete command waiting
+bool serial_has_complete_command ();
 
 // Writes one byte to the TX serial buffer. Called by main program.
 void serial_write(uint8_t data);

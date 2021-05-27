@@ -24,14 +24,15 @@
 #include "usbd_cdc_if.h"
 
 
+
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 // STM32 uses multi-buffering so that the microcontroller's USB stack can send entire buffers asynchronously.
 struct rxbuf_t rxbuf[RX_RING_SIZE];
 int rxhead=0; // lines consumed at head
 int rxtail=0; // lines produced at tail
-int rxblocked=false;  // indicator that rx is blocked (rate-limiting) -- to be checked after parsing an rx block
-int rxoverflow=false; // indicator that the entire rxbuf ring overflowed -- this is a critical error
+bool rxblocked=false;  // indicator that rx is blocked (rate-limiting) -- to be checked after parsing an rx block
+bool rxoverflow=false; // indicator that the entire rxbuf ring overflowed -- this is a critical error
 int curtx;
 
 // The USBD_CDC stack's line coding structure for baud, datalen, parity, stop, etc
@@ -42,6 +43,7 @@ USBD_CDC_LineCodingTypeDef linecoding = {
   0x08
 };
 
+
 void init_txbufs () 
 {
   curtx=0;
@@ -50,6 +52,7 @@ void init_txbufs ()
     txbuf[i].avail = 1;
   }
 }
+
 
 void init_rxbufs () 
 {
@@ -69,9 +72,11 @@ void flip_txbuf()
   curtx = (curtx+1) % 2;
 }
 
+
 uint8_t is_delim (uint8_t b) {
   return b=='\n' || b=='\r' || b==0;
 }
+
 
 uint8_t* find_delim (uint8_t* buf, int len) 
 {
@@ -87,51 +92,104 @@ uint8_t* find_delim (uint8_t* buf, int len)
 
 // Prepares rxhead so that the CDC read buffer can be set, returns 0 if successful or 1 if blocked.
 // Will set rxblock accordingly.
-uint8_t get_unused_rxbufs() 
+uint8_t get_unused_rxbufs () 
 {
   int usedblocks = (rxhead>=rxtail) ? rxhead-rxtail : rxhead-rxtail+RX_RING_SIZE;
   return RX_RING_SIZE - usedblocks;
 }
 
-uint8_t get_all_rxbufs_incomplete() 
+
+uint8_t get_all_rxbufs_incomplete () 
 {
+  NVIC_DisableIRQ(OTG_FS_IRQn);
   for (int i=rxtail; i != rxhead; i=(i+1)%RX_RING_SIZE) {
     if (rxbuf[i].mode != RXBUF_MODE_INCOMPLETE) {
+      NVIC_EnableIRQ(OTG_FS_IRQn);
       return false;
     }
   }
+  NVIC_EnableIRQ(OTG_FS_IRQn);
   return true;
 }
 
+
 uint8_t rxbuf_is_readable (struct rxbuf_t* pbuf)
 {
-  return pbuf->mode == RXBUF_MODE_COMPLETE || pbuf->mode == RXBUF_MODE_PARTIAL;
+  return (pbuf->mode & RXBUF_FLAG_COMPLETED) != 0x0;
 }
 
-// Returns the number of bytes available in the RX serial buffer.
-uint8_t serial_get_rx_buffer_available()
+
+bool rxbuf_is_completed (struct rxbuf_t* pbuf)
 {
-  return RX_BUFFER_SIZE - rxbuf[rxtail].pos;
+  if (pbuf->pos == 0) {
+    // For unread blocks, we can simply rely on mode flags.
+    int mode = pbuf->mode;
+    return (mode & RXBUF_FLAG_COMPLETED) != 0x0;
+  } else {
+    // For partially read blocks, we need to search for a completion from the current position.
+    for (int i=pbuf->pos; i < pbuf->len; i++) {
+      if (pbuf->buf[i] == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
 }
 
 
-// Returns the number of bytes used in the RX serial buffer.
-// NOTE: Deprecated. Not used unless classic status reports are enabled in config.h.
-uint8_t serial_get_rx_buffer_count()
+// Input functions to facilitate the STM32 streaming usb model
+// CAUTION: these two functions do no mode checking or validity checking
+//          -- calling code must have set up preconditions for these reads!
+uint8_t rx_advance_char () 
 {
-  return rxbuf[rxtail].pos;
+  rxbuf[rxtail].pos++;
+  if (rxbuf[rxtail].pos == rxbuf[rxtail].len) {
+    // free this rxbuf
+    rxbuf[rxtail].len = rxbuf[rxtail].pos = 0;
+    rxbuf[rxtail].mode = RXBUF_MODE_UNUSED;
+    // advance to the next one and ensure the read position is zero
+    rxtail = (rxtail+1) % RX_RING_SIZE;
+    rxbuf[rxtail].pos = 0;
+  }
+  uint8_t b = rx_cur_char();
+  return b;
 }
 
 
-// Returns the number of bytes used in the TX serial buffer.
-// NOTE: Not used except for debugging and ensuring no TX bottlenecks.
-uint8_t serial_get_tx_buffer_count()
+uint8_t rx_cur_char () 
 {
-  return txbuf[curtx].pos;
+  uint8_t b = rxbuf[rxtail].buf[rxbuf[rxtail].pos];
+  return b;
 }
 
 
-void serial_init()
+uint8_t rx_peek () 
+{
+  if (rxbuf[rxtail].pos+1 < rxbuf[rxtail].len) {
+    return rxbuf[rxtail].buf[rxbuf[rxtail].pos+1];
+  } else {
+    int nexttail = (rxtail+1) % RX_RING_SIZE;
+    return rxbuf[nexttail].buf[0];
+  }
+}
+
+
+// Returns length of the copied command line, including the terminating zero if one exists.
+int rx_copy (uint8_t* buf, int maxsz) 
+{
+  NVIC_DisableIRQ(OTG_FS_IRQn);
+  int i=0;
+  while (buf[i] && i < maxsz) {
+    buf[i++] = rx_cur_char();
+    rx_advance_char();
+  }
+  NVIC_EnableIRQ(OTG_FS_IRQn);
+  return i;
+}
+
+
+void serial_init ()
 {
   if (USBD_Init (&hUsbDeviceFS, &FS_Desc, DEVICE_FS) != USBD_OK) {  
     printf("USBD_Init Failed.\n");
@@ -156,8 +214,32 @@ void serial_init()
 }
 
 
+// Returns the number of bytes used in the RX serial buffer.
+// NOTE: Deprecated. Not used unless classic status reports are enabled in config.h.
+uint8_t serial_get_rx_buffer_count()
+{
+  return rxbuf[rxtail].pos;
+}
+
+
+// Returns the number of bytes used in the TX serial buffer.
+// NOTE: Not used except for debugging and ensuring no TX bottlenecks.
+uint8_t serial_get_tx_buffer_count()
+{
+  return txbuf[curtx].pos;
+}
+
+
+// Returns the number of bytes available in the RX serial buffer.
+uint8_t serial_get_rx_buffer_available()
+{
+  return rxbuf[rxtail].len - rxbuf[rxtail].pos;
+}
+
+
 // Writes one byte to the TX serial buffer. Called by main program.
-void serial_write(uint8_t data) {
+void serial_write(uint8_t data) 
+{
   uint16_t pos = txbuf[curtx].pos;
   uint8_t next_pos = txbuf[curtx].pos + 1;
   
@@ -182,32 +264,11 @@ void serial_write(uint8_t data) {
 }
 
 
-// Data Register Empty Interrupt handler
-#ifdef AVR
-ISR(SERIAL_UDRE)
-{
-  uint8_t tail = serial_tx_buffer_tail; // Temporary serial_tx_buffer_tail (to optimize for volatile)
-
-  // Send a byte from the buffer
-  UDR0 = serial_tx_buffer[tail];
-
-  // Update tail position
-  tail++;
-  if (tail == TX_RING_BUFFER) { tail = 0; }
-
-  serial_tx_buffer_tail = tail;
-
-  // Turn off Data Register Empty Interrupt to stop tx-streaming if this concludes the transfer
-  if (tail == serial_tx_buffer_head) { UCSR0B &= ~(1 << UDRIE0); }
-}
-#endif
-
-
 // Fetches the first byte in the serial read buffer. Called by main program.
 uint8_t serial_read()
 {
   uint16_t pos = rxbuf[rxtail].pos;
-  if (pos == rxbuf[rxtail].len) {
+  if (pos == rxbuf[rxtail].len) {    
     return SERIAL_NO_DATA;
   } else {
     uint8_t data = rxbuf[rxtail].buf[pos];
@@ -216,64 +277,23 @@ uint8_t serial_read()
   }
 }
 
-#ifdef AVR
-ISR(SERIAL_RX)
+
+bool serial_has_complete_command ()
 {
-  uint8_t data = UDR0;
-  uint8_t next_head;
-
-  // Pick off realtime command characters directly from the serial stream. These characters are
-  // not passed into the main buffer, but these set system state flag bits for realtime execution.
-  switch (data) {
-    case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
-    case CMD_STATUS_REPORT: system_set_exec_state_flag(EXEC_STATUS_REPORT); break; // Set as true
-    case CMD_CYCLE_START:   system_set_exec_state_flag(EXEC_CYCLE_START); break; // Set as true
-    case CMD_FEED_HOLD:     system_set_exec_state_flag(EXEC_FEED_HOLD); break; // Set as true
-    default :
-      if (data > 0x7F) { // Real-time control characters are extended ACSII only.
-        switch(data) {
-          case CMD_SAFETY_DOOR:   system_set_exec_state_flag(EXEC_SAFETY_DOOR); break; // Set as true
-          case CMD_JOG_CANCEL:   
-            if (sys.state & STATE_JOG) { // Block all other states from invoking motion cancel.
-              system_set_exec_state_flag(EXEC_MOTION_CANCEL); 
-            }
-            break; 
-          #ifdef DEBUG
-            case CMD_DEBUG_REPORT: {uint8_t sreg = SREG; cli(); bit_true(sys_rt_exec_debug,EXEC_DEBUG_REPORT); SREG = sreg;} break;
-          #endif
-          case CMD_FEED_OVR_RESET: system_set_exec_motion_override_flag(EXEC_FEED_OVR_RESET); break;
-          case CMD_FEED_OVR_COARSE_PLUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_COARSE_PLUS); break;
-          case CMD_FEED_OVR_COARSE_MINUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_COARSE_MINUS); break;
-          case CMD_FEED_OVR_FINE_PLUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_FINE_PLUS); break;
-          case CMD_FEED_OVR_FINE_MINUS: system_set_exec_motion_override_flag(EXEC_FEED_OVR_FINE_MINUS); break;
-          case CMD_RAPID_OVR_RESET: system_set_exec_motion_override_flag(EXEC_RAPID_OVR_RESET); break;
-          case CMD_RAPID_OVR_MEDIUM: system_set_exec_motion_override_flag(EXEC_RAPID_OVR_MEDIUM); break;
-          case CMD_RAPID_OVR_LOW: system_set_exec_motion_override_flag(EXEC_RAPID_OVR_LOW); break;
-          case CMD_SPINDLE_OVR_RESET: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_RESET); break;
-          case CMD_SPINDLE_OVR_COARSE_PLUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_COARSE_PLUS); break;
-          case CMD_SPINDLE_OVR_COARSE_MINUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_COARSE_MINUS); break;
-          case CMD_SPINDLE_OVR_FINE_PLUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_FINE_PLUS); break;
-          case CMD_SPINDLE_OVR_FINE_MINUS: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_FINE_MINUS); break;
-          case CMD_SPINDLE_OVR_STOP: system_set_exec_accessory_override_flag(EXEC_SPINDLE_OVR_STOP); break;
-          case CMD_COOLANT_FLOOD_OVR_TOGGLE: system_set_exec_accessory_override_flag(EXEC_COOLANT_FLOOD_OVR_TOGGLE); break;
-          #ifdef ENABLE_M7
-            case CMD_COOLANT_MIST_OVR_TOGGLE: system_set_exec_accessory_override_flag(EXEC_COOLANT_MIST_OVR_TOGGLE); break;
-          #endif
-        }
-        // Throw away any unfound extended-ASCII character by not passing it to the serial buffer.
-      } else { // Write character to buffer
-        next_head = serial_rx_buffer_head + 1;
-        if (next_head == RX_RING_BUFFER) { next_head = 0; }
-
-        // Write data to buffer unless it is full.
-        if (next_head != serial_rx_buffer_tail) {
-          serial_rx_buffer[serial_rx_buffer_head] = data;
-          serial_rx_buffer_head = next_head;
-        }
-      }
+  NVIC_DisableIRQ(OTG_FS_IRQn);
+  bool complete = false;
+  
+  for (int i=rxtail; (rxbuf[i].mode != RXBUF_MODE_UNUSED) && (i != rxhead); i=(i+1) % RX_RING_SIZE) {
+    if ( rxbuf_is_completed(&rxbuf[i]) ) {
+      complete = true;
+      break;
+    }
   }
+
+  NVIC_EnableIRQ(OTG_FS_IRQn);
+  return complete;
 }
-#endif
+
 
 void serial_reset_read_buffer()
 {
@@ -291,12 +311,14 @@ int8_t serial_init_cb(void)
   return USBD_OK;
 }
 
+
 int8_t serial_deinit_cb(void)
 {
   // basically do the same reset as in the init_cb()
   init_txbufs();
   return USBD_OK;
 }
+
 
 int8_t serial_control_cb(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
@@ -378,6 +400,7 @@ int8_t serial_control_cb(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   /* USER CODE END 5 */
 
 }
+
 
 /**
  * Note: Incoming packets at FS have a packet size of 64. This is the largest value you should see in *Len.
@@ -479,6 +502,7 @@ int8_t serial_recv_cb(uint8_t* pbuf, uint32_t *Len)
   
   return USBD_OK;
 }
+
 
 int8_t serial_txcplt_cb(uint8_t *pbuf, uint32_t *Len, uint8_t epnum)
 {

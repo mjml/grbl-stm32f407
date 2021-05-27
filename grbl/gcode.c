@@ -88,7 +88,6 @@ uint8_t gc_execute_line(char *line)
   uint16_t value_words = 0; // Tracks value words.
   uint8_t gc_parser_flags = GC_PARSER_NONE;
 
-  // Determine if the line is a jogging motion or a normal g-code block.
   if (line[0] == '$') { // NOTE: `$J=` already parsed when passed to this function.
     // Set G1 and G94 enforced modes to ensure accurate error checks.
     gc_parser_flags |= GC_PARSER_JOG_MOTION;
@@ -98,7 +97,6 @@ uint8_t gc_execute_line(char *line)
       gc_block.values.n = JOG_LINE_NUMBER; // Initialize default line number reported during jog.
     #endif
   }
-
   /* -------------------------------------------------------------------------------------
      STEP 2: Import all g-code words in the block line. A g-code word is a letter followed by
      a number, which can either be a 'G'/'M' command or sets/assigns a command value. Also,

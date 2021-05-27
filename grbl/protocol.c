@@ -28,12 +28,15 @@
 
 #ifdef AVR
 static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
-#elif STM32
-static char* line = NULL;
 #endif
 
+#define LINE_SIZE 512
+uint8_t line[LINE_SIZE];
+uint8_t line_flags;
+
+
 static void protocol_exec_rt_suspend();
-void protocol_preprocess_line (char* line);
+static void protocol_preprocess (uint8_t* line, uint8_t* end, uint8_t* lineflags, uint16_t* pcmdlen, uint16_t* plinelen, bool* complete);
 
 #ifdef AVR
 /*
@@ -208,65 +211,97 @@ void protocol_main_loop ()
     if (rxoverflow) {
       report_status_message(STATUS_OVERFLOW);
       serial_init();
+      continue;
     } 
-    
-    // Check for readable input
-    if (rxbuf_is_readable(&rxbuf[rxtail])) {
-      line = (char*)(rxbuf[rxtail].buf + rxbuf[rxtail].pos);
-      const char* end = (const char*) rxbuf[rxtail].buf + rxbuf[rxtail].len; 
-      int len = end-line;
-      if (end != NULL) {
-        // In the STM32 version, we need to preprocess this line and delete some of the "realtime command" characters.
-        protocol_preprocess_line(line);
-        if (line[0] == 0) {
-          report_status_message(STATUS_OK);
-          rxbuf[rxtail].pos++;
-        } else if (line[0] == '$') {
-          // interpret as realtime command
-          report_status_message(system_execute_line(line));
-          rxbuf[rxtail].pos += (len+1);
-        } else if (sys.state & (STATE_ALARM | STATE_JOG)) {
-          // block if in alarm or jog mode
-          report_status_message(STATUS_SYSTEM_GC_LOCK);
-        } else {
-          // interpret as standard text command
-          report_status_message(gc_execute_line(line));
-          rxbuf[rxtail].pos += (len+1);
-        }
-      }
-    }
 
+    // Check for complete, readable input
+    if (serial_has_complete_command()) {
+
+      // In the STM32 version, we need to preprocess this line and delete some of the "realtime command" characters.
+      uint16_t cmdlen, linelen, linelen2;
+      bool complete;
+
+      // Here we've filtered the (potentially fragmented) completed line, so
+      //   copy it to a buffer one of the parsers.
+      linelen = rx_copy(line, LINE_SIZE);
+      if ((linelen == LINE_SIZE) && (line[LINE_SIZE-1] != 0)) {
+        // This is a buffer overflow of the line[LINE_SIZE] buffer.        
+        // TODO: print error and skip further processing of this line.
+
+      }
+
+      protocol_preprocess(line, line+cmdlen, &line_flags, &cmdlen, &linelen2, &complete);
+      if (linelen != (linelen2+1)) {
+        // linelen includes the terminating zero, linelen2 does not.
+        // TODO: print error and skip further processing of this line.
+
+      }
+
+      if ( line[0] == 0 ) {
+        report_status_message(STATUS_OK);
+      } else if ( line[0] == '$' ) {
+        // interpret as realtime command
+        report_status_message(system_execute_line(line));
+      } else if ( sys.state & (STATE_ALARM | STATE_JOG) ) {
+        // block if in alarm or jog mode
+        report_status_message(STATUS_SYSTEM_GC_LOCK);
+      } else {
+        // interpret as standard text command
+        report_status_message(gc_execute_line(line));
+      }
+
+      line_flags = 0;
+    
+    }
   }
 
 }
 
 
-// Filter out the "realtime" characters that would be processed by the serial module's receive callback and processed in the interrupt.
-void protocol_preprocess_line (char* line)
+// Filter out certain characters that would be passed along by the serial module's receive callback.
+// This STM32-specific function is doing some of the filtering of grbl's serial.c and also protocol.c.
+// This filter does not move the read pointer rxbuf[rxtail].pos.
+void protocol_preprocess (uint8_t* line, uint8_t* end, uint8_t* line_flags, uint16_t* pcmdlen, uint16_t* plinelen, bool* complete)
 {
   char* tgt=line;
   char* src=line;
-  
-  do {
-    uint8_t c = *src;
-    if (c == CMD_RESET ||
-        c == CMD_STATUS_REPORT ||
-        c == CMD_CYCLE_START ||
-        c == CMD_FEED_HOLD ||
-        c > 0x7f) {
-          // ignore these
-          src++;
-        } else if (c=='\n' || c=='\r') {
-          *tgt = 0;
-          tgt++;
-          src++;
-          break;
-        } else {
-          *tgt = *src;
-          tgt++;
-          src++;
-        }
-    } while(1);
+
+  *pcmdlen = 0;
+  *plinelen = 0;
+  uint8_t c;
+  while (src != end) {
+    c = *src;
+    if (c=='\n'|| c=='\r' || c==0) {
+      *(tgt) = 0;
+      *complete = true;
+      break;
+    } else if (*line_flags & LINE_FLAG_COMMENT_PARENTHESES) {
+      if (c == ')') {
+        *line_flags &= ~LINE_FLAG_COMMENT_PARENTHESES;
+      }
+    } else if (*line_flags & LINE_FLAG_COMMENT_PARENTHESES) {
+      
+    } else if (c <= ' '                 // ignore whitespace and control characters
+      || c == CMD_RESET                 // ignore realtime commands handled in serial.stm32.c
+      || c == CMD_STATUS_REPORT   
+      || c == CMD_CYCLE_START
+      || c == CMD_FEED_HOLD
+      || c == '/'                       // ignore "block delete"
+      || c > 0x7f) {                    // ignore realtime commands handled in serial.stm32.c
+
+    } else if (c == '(') {              // start a parenthetic comment
+      *line_flags |= LINE_FLAG_COMMENT_PARENTHESES;
+    } else if (c == ';') {              // signal a semicolon-to-end-of-line comment
+      *line_flags |= LINE_FLAG_COMMENT_SEMICOLON;
+    } else if (c >= 'a' && c <= 'z') {  // transliterate lowercase->uppercase
+      *(tgt++) = *(src)-'a'+'A';
+      (*pcmdlen)++;
+    } else {                            // copy everything else
+      *(tgt++) = *(src);
+      (*pcmdlen)++;
+    }
+    src++;  
+  };
 
 }
 #endif

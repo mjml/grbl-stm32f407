@@ -23,8 +23,6 @@
 #include "usbd_cdc_if.h"
 #include "usbd_desc.h"
 
-#include "server.h"
-
 // allows "transmit complete" to make buffers available
 #include "serial.stm32.h" 
 
@@ -104,10 +102,10 @@ int8_t host_connected=0;
 /* Create buffer for reception and transmission           */
 /* It's up to user to redefine and/or remove those define */
 /** Received data over USB are stored in this buffer      */
-uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
+//uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 
 /** Data to send over USB CDC are stored in this buffer   */
-uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
+//uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
 
@@ -153,15 +151,22 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 
 /*
- * MJ: Consider changing these directly to functions given in serial.stm32.c
+ * MJ: These have been changed to call the serial.stm.c callbacks.
  */
 USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 {
+  /*
   CDC_Init_FS,
   CDC_DeInit_FS,
   CDC_Control_FS,
   CDC_Receive_FS,
   CDC_TransmitCplt_FS
+  */
+  serial_init_cb,
+  serial_deinit_cb,
+  serial_control_cb,
+  serial_recv_cb,
+  serial_txcplt_cb
 };
 
 /* Private functions ---------------------------------------------------------*/
@@ -169,12 +174,12 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
   * @brief  Initializes the CDC media low layer over the FS USB IP
   * @retval USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Init_FS(void)
+int8_t CDC_Init_FS(void)
 {
   /* USER CODE BEGIN 3 */
   serial_init_cb();
-  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, , 0);
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
+  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, txbuf[curtx].buf, 0);
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, rxbuf[rxhead].buf);
 
   return (USBD_OK);
   /* USER CODE END 3 */
@@ -184,7 +189,7 @@ static int8_t CDC_Init_FS(void)
   * @brief  DeInitializes the CDC media low layer
   * @retval USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_DeInit_FS(void)
+int8_t CDC_DeInit_FS(void)
 {
   /* USER CODE BEGIN 4 */
   return (USBD_OK);
@@ -198,7 +203,7 @@ static int8_t CDC_DeInit_FS(void)
   * @param  length: Number of data to be sent (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
+int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
   USBD_SetupReqTypedef* req = NULL;
 
@@ -293,7 +298,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
   /* TODO: In FS mode, this receive call doesn't use DMA. 
@@ -345,7 +350,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
+int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 13 */

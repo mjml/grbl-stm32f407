@@ -31,12 +31,14 @@
 #CLOCK      = 16000000
 CLOCK       = 168000000
 
-SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.c \
+SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
              protocol.c stepper.c eeprom.c settings.c planner.c nuts_bolts.c limits.c jog.c\
              print.c probe.c report.c system.c
 BUILDDIR = build
 GRBL_PATH = grbl
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
+GRBL_OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) 
+
 
 
 OBJDUMP=arm-none-eabi-objdump
@@ -44,7 +46,7 @@ OBJCOPY=arm-none-eabi-objcopy
 CC=arm-none-eabi-gcc
 AS=arm-none-eabi-as
 SIZE=arm-none-eabi-size
-CFLAGS=-DSTM32 -DSTM32F407xx -Wall -Os -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CFLAGS=-DSTM32 -DSTM32F407xx -std=c99 -Wall -Os -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 # All the following needed for STM32:
 # CMSIS (lowest level)
@@ -102,10 +104,8 @@ USBIMPL_OBJECTS = $(addprefix $(BUILDDIR)/usbimpl/,$(USBIMPL_MODULES:.c=.o))
 
 # Compile flags for avr-gcc v4.9.2 compatible with the IDE. Or if you don't care about the warnings. 
 # COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections -flto
-COMPILE = $(CC) $(CFLAGS) -I$(STM32_INCL) -I$(CMSIS_ARM_INCL) -I$(CMSIS_DEVICE_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I$(USBIMPL_INCL)
+COMPILE = $(CC) $(CFLAGS) -I$(GRBL_PATH) -I$(STM32_INCL) -I$(CMSIS_ARM_INCL) -I$(CMSIS_DEVICE_INCL) -I$(HAL_INCL) -I$(USB_INCL) -I$(USBCDC_INCL) -I$(USBIMPL_INCL)
 ASM = $(AS) -Wall
-
-OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) $(USBIMPL_OBJECTS)
 
 # symbolic targets:
 @default: all
@@ -114,6 +114,7 @@ OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) $(CMSIS_OBJECTS) $
 	@echo USBCDC_SRC is $(USBCDC_SRC)
 	@echo USBCDC_SOURCES are $(USBCDC_SOURCES)
 	@echo USBCDC_OBJECTS are $(USBCDC_OBJECTS)
+	@echo OBJECTS are $(OBJECTS)
 
 all:	grbl.hex
 
@@ -172,7 +173,7 @@ clean:
 	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf
 
 # file targets:
-$(BUILDDIR)/main.elf: $(OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
+$(BUILDDIR)/main.elf: $(GRBL_OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
 	$(COMPILE) -o $(BUILDDIR)/main.elf $(OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) -lm -Wl,--gc-sections
 
 grbl.hex: $(BUILDDIR)/main.elf
