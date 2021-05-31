@@ -32,7 +32,7 @@
 CLOCK       = 168000000
 
 SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
-             protocol.c stepper.c eeprom.c settings.c planner.c nuts_bolts.c limits.c jog.c\
+             protocol.c stepper.c flash.c settings.c planner.c nuts_bolts.c limits.c jog.c\
              print.c probe.c report.c system.c
 BUILDDIR = build
 GRBL_PATH = grbl
@@ -47,6 +47,10 @@ CC=arm-none-eabi-gcc
 AS=arm-none-eabi-as
 SIZE=arm-none-eabi-size
 CFLAGS=-DSTM32 -DSTM32F407xx -std=c99 -Wall -Os -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+LDSCRIPT=
+LIBS=
+LIBDIR=
+LDFLAGS=-lm -Wl,--gc-sections $(MCU) --specs=nosys.specs --specs=nano.specs -static -T$(LDSCRIPT) $(LIBDIR) $(LIBS) 
 
 # All the following needed for STM32:
 # CMSIS (lowest level)
@@ -174,7 +178,7 @@ clean:
 
 # file targets:
 $(BUILDDIR)/main.elf: $(GRBL_OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
-	$(COMPILE) -o $(BUILDDIR)/main.elf $(OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS) -lm -Wl,--gc-sections
+	$(CC) $(LDFLAGS) -Wl,-Map=$(basename $@).map,--cref,--gc-sections,--start-group,--end-group -o $@ $(OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
 
 grbl.hex: $(BUILDDIR)/main.elf
 	rm -f grbl.hex
