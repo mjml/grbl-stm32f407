@@ -32,7 +32,7 @@
 CLOCK       = 168000000
 
 SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
-             protocol.c stepper.c flash.c settings.c planner.c nuts_bolts.c limits.c jog.c\
+             protocol.c stepper.c flash.c settings.stm32.c planner.c nuts_bolts.c limits.c jog.c\
              print.c probe.c report.c system.c
 BUILDDIR = build
 GRBL_PATH = grbl
@@ -46,7 +46,7 @@ OBJCOPY=arm-none-eabi-objcopy
 CC=arm-none-eabi-gcc
 AS=arm-none-eabi-as
 SIZE=arm-none-eabi-size
-CFLAGS=-DSTM32 -DSTM32F407xx -std=c99 -Wall -Os -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CFLAGS=-DSTM32 -DSTM32F407xx -std=c99 -g -Wall -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
 LDSCRIPT=
 LIBS=
 LIBDIR=
