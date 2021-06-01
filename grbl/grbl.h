@@ -71,7 +71,14 @@
 #endif
 #include "system.h"
 #include "defaults.h"
+
+#ifdef AVR
 #include "cpu_map.h"
+#elif STM32
+#include "iomap.stm32.h"
+#endif
+
+
 #include "planner.h"
 #include "coolant_control.h"
 #ifdef AVR
