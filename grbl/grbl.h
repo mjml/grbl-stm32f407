@@ -75,7 +75,7 @@
 #ifdef AVR
 #include "cpu_map.h"
 #elif STM32
-#include "iomap.stm32.h"
+#include "gpio.stm32.h"
 #endif
 
 

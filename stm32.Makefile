@@ -32,8 +32,8 @@
 CLOCK       = 168000000
 
 SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
-             protocol.c stepper.c flash.c settings.stm32.c planner.c nuts_bolts.c limits.c jog.c\
-             print.c probe.c report.c system.c
+             protocol.c stepper.c flash.c gpio.stm32.c settings.stm32.c planner.c nuts_bolts.c limits.c jog.c\
+             print.c probe.c report.c system.stm32.c
 BUILDDIR = build
 GRBL_PATH = grbl
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
