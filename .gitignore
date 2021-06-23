@@ -9,3 +9,4 @@ vscode.code-workspace
 README.md
 fp-info-cache
 build.log
+__pycache__

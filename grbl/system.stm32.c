@@ -23,16 +23,26 @@
 
 void system_init()
 {
-  /*
-  CONTROL_DDR &= ~(CONTROL_MASK); // Configure as input pins
-  #ifdef DISABLE_CONTROL_PIN_PULL_UP
-    CONTROL_PORT &= ~(CONTROL_MASK); // Normal low operation. Requires external pull-down.
-  #else
-    CONTROL_PORT |= CONTROL_MASK;   // Enable internal pull-up resistors. Normal high operation.
+  
+  #ifdef ENABLE_RESET
+  gpio_enable(&reset);
   #endif
-  CONTROL_PCMSK |= CONTROL_MASK;  // Enable specific pins of the Pin Change Interrupt
-  PCICR |= (1 << CONTROL_INT);   // Enable Pin Change Interrupt
-  */
+
+  #ifdef ENABLE_FEED_HOLD
+  gpio_enable(&feedhld);
+  #endif
+
+  #ifdef ENABLE_SAFETY_DOOR
+  gpio_enable(&safety);
+  #endif
+
+  #ifdef ENABLE_CYCLE_START
+  gpio_enable(&cstart);
+  #endif
+
+  #ifdef ENABLE_PROBE
+  gpio_enable(&probe);
+  #endif
   
 }
 
@@ -42,31 +52,99 @@ void system_init()
 // defined by the CONTROL_PIN_INDEX in the header file.
 uint8_t system_control_get_state()
 {
-  uint8_t control_state = 0;
-  uint8_t pin = (CONTROL_PIN & CONTROL_MASK) ^ CONTROL_MASK;
-  #ifdef INVERT_CONTROL_PIN_MASK
-    pin ^= INVERT_CONTROL_PIN_MASK;
-  #endif
-  if (pin) {
-    #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-      if (bit_istrue(pin,(1<<CONTROL_SAFETY_DOOR_BIT))) { control_state |= CONTROL_PIN_INDEX_SAFETY_DOOR; }
-    #else
-      if (bit_istrue(pin,(1<<CONTROL_FEED_HOLD_BIT))) { control_state |= CONTROL_PIN_INDEX_FEED_HOLD; }
-    #endif
-    if (bit_istrue(pin,(1<<CONTROL_RESET_BIT))) { control_state |= CONTROL_PIN_INDEX_RESET; }
-    if (bit_istrue(pin,(1<<CONTROL_CYCLE_START_BIT))) { control_state |= CONTROL_PIN_INDEX_CYCLE_START; }
-  }
-  return(control_state);
+  uint16_t field = gpio_read_port_mask (CONTROL_PORT, CONTROL_MASK);
+
+#ifdef INVERT_CONTROL_PIN_MASK
+  field ^= INVERT_CONTROL_PIN_MASK;
+#endif
+
+  return (uint8_t)(field);
+
 }
 
-
-// Pin change interrupt for pin-out commands, i.e. cycle start, feed hold, and reset. Sets
-// only the realtime command execute variable to have the main program execute these when
-// its ready. This works exactly like the character-based realtime commands when picked off
-// directly from the incoming serial data stream.
-ISR(CONTROL_INT_vect)
+void system_gpio_callback_hook (uint16_t field) 
 {
-  uint8_t pin = system_control_get_state();
+  uint16_t n = field;
+  int pin = 0;
+  while (n) {
+    if (!(n & 0x01)) {
+      pin++;
+      n >>= 1;
+    } else break;
+  }
+
+  switch (pin) {
+    case CONTROL_RESET_BIT:
+      
+    break;
+
+    case CONTROL_FEED_HOLD_BIT:
+
+    break;
+
+    #if(CONTROL_SAFETY_DOOR_BIT != CONTROL_FEED_HOLD_BIT)
+    case CONTROL_SAFETY_DOOR_BIT:
+
+    break;
+    #endif
+
+    case CONTROL_CYCLE_START_BIT:
+
+    break;
+
+    case CONTROL_INPUT_BIT:
+
+    break;
+
+    case PROBE_BIT:
+
+    break;
+
+    case X_LIMIT_BIT:
+  
+    break;
+
+    case Y_LIMIT_BIT:
+
+    break;
+    case Z_LIMIT_BIT:
+
+    break;
+    case A_LIMIT_BIT:
+
+    break;
+    case B_LIMIT_BIT:
+
+    break;
+    #if(PIN_XHOME != PIN_XLIM)
+    case X_HOME_BIT:
+
+    break;
+    #endif
+    #if(PIN_YHOME != PIN_YLIM)
+    case Y_HOME_BIT:
+
+    break;
+    #endif
+    #if(PIN_ZHOME != PIN_ZLIM)
+    case Z_HOME_BIT:
+
+    break;
+    #endif
+    #if(PIN_AHOME != PIN_ALIM)
+    case A_HOME_BIT:
+
+    break;
+    #endif
+    #if(PIN_BHOME != PIN_BLIM)
+    case B_HOME_BIT:
+
+    break;
+    #endif
+    
+
+  }
+
   if (pin) {
     if (bit_istrue(pin,CONTROL_PIN_INDEX_RESET)) {
       mc_reset();
@@ -83,6 +161,7 @@ ISR(CONTROL_INT_vect)
     #endif
     }
   }
+
 }
 
 

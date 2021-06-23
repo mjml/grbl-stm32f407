@@ -1,0 +1,66 @@
+
+system:
+  reset:        E1
+  cycle_start:  E0
+  feed_hold:    E3
+  safety_door:  E2
+  probe:        E4
+
+axes:
+  - "x"
+  - "y"
+  - "z"
+  - "a"
+  - "b"
+
+motors:
+  - axis: x
+    pul: C7  od
+    dir: D0  od
+    ena: A1  od
+    alm: G4  pu alm # The touch/height probe is on line 4 so it might be better to put this on 10,12 or 15
+  - axis: y
+    pul: C13 od
+    dir: C11 od
+    ena: F3  od
+    alm: G13 pu alm
+  - axis: z
+    pul: D6  od
+    dir: C9  od
+    ena: F5  od
+    alm: G11 pu alm
+
+# I'm opting to use external 6.8k pull-ups for limit and homing switches instead of the internal 40k pull-ups,
+#   but you could easily add 'pu' to these pin definitions to enable the internal ones.
+limits:
+  - axis: x
+    limit:  E6
+  - axis: y
+    limit:  E7
+  - axis: z
+    limit:  E8
+
+homes:
+  - axis: x
+    home:  E6
+  - axis: y
+    home:  E7
+  - axis: z
+    home:  E8
+
+flood:
+  out:  Z99 od
+
+mist:
+  out:  B11 od
+
+atc:
+  tool_release: B14 od
+  tool_engage: B12 od
+  in:   Z99 pu
+
+spindle:
+  ena:  D15 od
+  dir:  D13 od
+  pwm:  Z99 od
+

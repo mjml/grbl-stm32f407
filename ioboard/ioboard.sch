@@ -363,8 +363,6 @@ Wire Wire Line
 Wire Wire Line
 	6000 1600 6000 1400
 Wire Wire Line
-	2050 6700 1700 6700
-Wire Wire Line
 	2050 6600 1700 6600
 Wire Wire Line
 	2050 6500 1700 6500
@@ -390,10 +388,6 @@ Text Label 1700 6400 0    50   ~ 10
 AENA+
 Text Label 1700 6500 0    50   ~ 10
 AENA-
-Text Label 1700 6600 0    50   ~ 10
-AALM+
-Text Label 1700 6700 0    50   ~ 10
-AALM-
 $Comp
 L Connector_Generic:Conn_01x08 J?
 U 1 1 607582D3
@@ -451,37 +445,33 @@ $EndComp
 Wire Wire Line
 	5050 3150 4700 3150
 Wire Wire Line
-	6000 9300 6350 9300
+	6000 9300 6600 9300
 Wire Wire Line
 	5050 3050 4700 3050
 Wire Wire Line
-	6000 6000 6350 6000
+	6000 6000 6600 6000
 Wire Wire Line
 	5050 2940 4700 2940
-Text Label 6350 6000 2    50   ~ 10
+Text Label 7250 6460 2    50   ~ 10
 APUL-
-Text Label 6350 9300 2    50   ~ 10
+Text Label 6600 9300 2    50   ~ 10
 ADIR-
-Text Label 4450 6700 0    50   ~ 10
-AALM+
 Wire Wire Line
 	6000 2000 5600 2000
 Wire Wire Line
 	5050 3640 4700 3640
 Wire Wire Line
-	6000 9100 6350 9100
+	6000 9100 6590 9100
 Wire Wire Line
 	5050 3540 4700 3540
 Wire Wire Line
-	6000 5800 6350 5800
+	6000 5800 6600 5800
 Wire Wire Line
 	5050 3450 4700 3450
-Text Label 6350 5800 2    50   ~ 10
+Text Label 7260 6100 2    50   ~ 10
 BPUL-
-Text Label 6350 9100 2    50   ~ 10
+Text Label 6590 9100 2    50   ~ 10
 BDIR-
-Text Label 4450 6500 0    50   ~ 10
-BALM+
 Text Label 5600 2000 0    50   ~ 10
 BALM-
 Wire Wire Line
@@ -555,23 +545,23 @@ Wire Wire Line
 Connection ~ 13550 2100
 Text Label 4450 9600 0    50   ~ 10
 XALM+
-Text Label 6350 6400 2    50   ~ 10
+Text Label 6590 6400 2    50   ~ 10
 YPUL-
 Wire Wire Line
-	6000 6400 6350 6400
-Text Label 6350 6200 2    50   ~ 10
-ZPUL-
+	6000 6400 6590 6400
+Text Label 7310 6810 2    50   ~ 10
+SPPWM
 Wire Wire Line
-	6000 6200 6350 6200
-Text Label 6350 6600 2    50   ~ 10
+	6000 6200 6600 6200
+Text Label 6590 6600 2    50   ~ 10
 XENA-
-Text Label 6350 6800 2    50   ~ 10
+Text Label 6590 6800 2    50   ~ 10
 YENA-
-Text Label 6350 7000 2    50   ~ 10
+Text Label 6590 7000 2    50   ~ 10
 ZENA-
-Text Label 6350 7200 2    50   ~ 10
+Text Label 6590 7200 2    50   ~ 10
 AENA-
-Text Label 6350 7400 2    50   ~ 10
+Text Label 6590 7400 2    50   ~ 10
 BENA-
 Text Label 4400 11600 0    50   ~ 0
 VCC
@@ -599,15 +589,15 @@ Wire Wire Line
 Wire Wire Line
 	6800 11200 6800 11800
 Wire Wire Line
-	6000 6600 6350 6600
+	6000 6600 6590 6600
 Wire Wire Line
-	6000 6800 6350 6800
+	6000 6800 6590 6800
 Wire Wire Line
-	6000 7000 6350 7000
+	6000 7000 6590 7000
 Wire Wire Line
-	6000 7200 6350 7200
+	6000 7200 6590 7200
 Wire Wire Line
-	6000 7400 6350 7400
+	6000 7400 6590 7400
 $Comp
 L power:VCC #PWR?
 U 1 1 60C717BA
@@ -667,17 +657,6 @@ XDIR+
 Text Label 4700 1440 0    50   ~ 10
 XPUL+
 $Comp
-L STM32Boards:BlackBoard BLB?1
-U 1 1 60628595
-P 5400 5350
-F 0 "BLB?1" H 5410 5130 50  0000 C CNN
-F 1 "BlackBoard" H 5400 5240 50  0000 C CNN
-F 2 "" H 4750 6550 50  0001 C CNN
-F 3 "" H 4750 6550 50  0001 C CNN
-	1    5400 5350
-	-1   0    0    -1  
-$EndComp
-$Comp
 L power:VCC #PWR?
 U 1 1 60DF4D78
 P 5050 1140
@@ -691,10 +670,6 @@ $EndComp
 Wire Wire Line
 	5050 1140 5050 1440
 Connection ~ 5050 1440
-Wire Wire Line
-	4450 6500 4800 6500
-Wire Wire Line
-	4450 6700 4800 6700
 Wire Wire Line
 	4450 6900 4800 6900
 Wire Wire Line
@@ -912,9 +887,9 @@ F 3 "~" H 3900 1500 50  0001 C CNN
 	1    3900 1500
 	1    0    0    -1  
 $EndComp
-Text Label 3400 1600 0    50   ~ 0
+Text Label 3400 1600 0    50   ~ 10
 ESTP-
-Text Label 3400 1500 0    50   ~ 0
+Text Label 3400 1500 0    50   ~ 10
 ESTP+
 Wire Wire Line
 	3400 1500 3700 1500
@@ -931,12 +906,123 @@ F 3 "~" H 10000 4000 50  0001 C CNN
 	1    10000 4000
 	1    0    0    -1  
 $EndComp
-Text Label 9300 3900 0    50   ~ 0
+Text Label 9300 3900 0    50   ~ 10
 SPSPD
-Text Label 9300 4000 0    50   ~ 0
+Text Label 9300 4000 0    50   ~ 10
 ACOM
 Wire Wire Line
 	9300 3900 9800 3900
 Wire Wire Line
 	9300 4000 9800 4000
+Text Label 6600 6500 2    50   ~ 10
+XLIM+
+Text Label 6600 10000 2    50   ~ 10
+YLIM+
+Text Label 6600 10300 2    50   ~ 10
+ZLIM+
+Text Label 6600 5800 2    50   ~ 10
+RESET+
+Text Label 6600 6000 2    50   ~ 10
+FEEDHOLD+
+Text Label 6600 5900 2    50   ~ 10
+CSTART+
+Wire Wire Line
+	6350 8000 6000 8000
+Wire Wire Line
+	6350 8200 6000 8200
+Wire Wire Line
+	6600 8400 6000 8400
+Text Label 6600 6300 2    50   ~ 10
+PROBE+
+Wire Wire Line
+	6360 8600 6000 8600
+Text Label 7190 7630 2    50   ~ 10
+FAN
+Text Label 7250 7950 2    50   ~ 10
+LIGHTS
+Text Label 7250 8170 2    50   ~ 10
+FLOOD
+Text Label 6600 11000 2    50   ~ 10
+MIST
+Wire Wire Line
+	6600 11000 6000 11000
+Text Label 4460 10200 0    50   ~ 10
+SPEN
+Wire Wire Line
+	4460 10200 4800 10200
+Text Label 4470 10400 0    50   ~ 10
+SPDIR
+Wire Wire Line
+	4800 10400 4470 10400
+Text Label 4460 7300 0    50   ~ 10
+ZPUL-
+Wire Wire Line
+	4460 7300 4800 7300
+Wire Wire Line
+	6440 9500 6000 9500
+Text Label 6600 8400 2    50   ~ 10
+SPKR
+Text Label 4480 11300 0    50   ~ 10
+ATC2
+Wire Wire Line
+	4480 11300 4800 11300
+Text Label 4480 11100 0    50   ~ 10
+ATC1
+Wire Wire Line
+	4480 11100 4800 11100
+Wire Wire Line
+	2050 6700 1700 6700
+Text Label 1700 6700 0    50   ~ 10
+AALM-
+Text Label 1700 6600 0    50   ~ 10
+AALM+
+Wire Wire Line
+	4450 6700 4800 6700
+Wire Wire Line
+	4450 6500 4800 6500
+Text Label 4450 6700 0    50   ~ 10
+AALM+
+Text Label 6600 10500 2    50   ~ 10
+BALM+
+Wire Wire Line
+	4800 7500 4450 7510
+Wire Wire Line
+	4450 7700 4800 7700
+Text Label 6600 6200 2    50   ~ 10
+INPUT+
+Wire Wire Line
+	4460 10000 4800 10000
+Wire Wire Line
+	6600 5900 6000 5900
+Text Label 6600 6100 2    50   ~ 10
+SAFETYDOOR+
+Wire Wire Line
+	6600 6100 6000 6100
+Wire Wire Line
+	6600 6500 6000 6500
+Wire Wire Line
+	6600 6300 6000 6300
+Wire Wire Line
+	6600 10000 6000 10000
+Wire Wire Line
+	6600 10300 6000 10300
+Text Label 6600 10200 2    50   ~ 10
+ALIM+
+Text Label 4450 7700 0    50   ~ 10
+BLIM+
+$Comp
+L STM32Boards:BlackBoard BLB?1
+U 1 1 60628595
+P 5400 5350
+F 0 "BLB?1" H 5410 5130 50  0000 C CNN
+F 1 "BlackBoard" H 5400 5240 50  0000 C CNN
+F 2 "" H 4750 6550 50  0001 C CNN
+F 3 "" H 4750 6550 50  0001 C CNN
+	1    5400 5350
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	6600 10500 6000 10500
+Wire Wire Line
+	6600 10200 6000 10200
 $EndSCHEMATC
