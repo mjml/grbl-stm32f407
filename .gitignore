@@ -10,3 +10,6 @@ README.md
 fp-info-cache
 build.log
 __pycache__
+
+# Generated source
+grbl/gpio_map.[ch]
