@@ -41,7 +41,7 @@ void gpio_reset_pin(gpio_t* gpio) {
 }
 
 
-void gpio_shadow(gpio_t* gpio) {
+bool gpio_shadow(gpio_t* gpio) {
   bool pinvalue = gpio_read_pin(gpio);
   if (pinvalue != gpio->shadow_input) {
     gpio->shadow_input = pinvalue;

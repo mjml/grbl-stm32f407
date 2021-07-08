@@ -30,7 +30,7 @@ typedef struct stepper {
 
 
 void      gpio_enable (gpio_t* gpio);
-bool      gpio_disable (gpio_t* gpio);
+void      gpio_disable (gpio_t* gpio);
 bool      gpio_read_pin(gpio_t* gpio);
 void      gpio_write_pin (gpio_t* gpio, bool value);
 void      gpio_set_pin (gpio_t* gpio);
