@@ -175,18 +175,10 @@ uint8_t system_control_get_state();
 uint8_t system_check_safety_door_ajar();
 
 // Executes an internal system command, defined as a string starting with a '$'
-#ifdef AVR
 uint8_t system_execute_line(char *line);
-#elif STM32
-uint8_t system_execute_line();
-#endif
 
 // Execute the startup script lines stored in EEPROM upon initialization
-#ifdef AVR
 void system_execute_startup(char *line);
-#elif STM32
-void system_execute_startup();
-#endif
 
 
 void system_flag_wco_change();

@@ -66,16 +66,19 @@
 #include "nuts_bolts.h"
 #ifdef AVR
 #include "settings.h"
+#include "system.h"
 #elif STM32
 #include "settings.stm32.h"
+#include "system.stm32.h"
 #endif
-#include "system.h"
+
 #include "defaults.h"
 
 #ifdef AVR
 #include "cpu_map.h"
 #elif STM32
 #include "gpio.stm32.h"
+#include "gpio_map.h"
 #endif
 
 

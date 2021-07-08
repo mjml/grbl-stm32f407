@@ -1,4 +1,3 @@
-
 #include "grbl.h"
 
 // gpio_t definition and declarations are part of the auto-generated gpio_map.[ch]

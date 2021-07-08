@@ -32,13 +32,12 @@
 CLOCK       = 168000000
 
 SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
-             protocol.c stepper.c flash.c gpio.stm32.c settings.stm32.c planner.c nuts_bolts.c limits.c jog.c\
+             protocol.c stepper.c flash.c gpio.stm32.c gpio_map.c settings.stm32.c planner.c nuts_bolts.c limits.c jog.c\
              print.c probe.c report.c system.stm32.c
 BUILDDIR = build
 GRBL_PATH = grbl
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
 GRBL_OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) 
-
 
 
 OBJDUMP=arm-none-eabi-objdump
@@ -125,6 +124,7 @@ all:	grbl.hex
 # These two CMSIS modules are special and are added explicitly. 
 # These need to be chosen to reflect the ARM architecture
 $(BUILDDIR)/device/system_stm32f4xx.o: $(CMSIS_PATH)/Source/Templates/system_stm32f4xx.c
+	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
 $(BUILDDIR)/device/startup_stm32f407xx.o: $(CMSIS_PATH)/Source/Templates/gcc/startup_stm32f407xx.s
@@ -132,18 +132,21 @@ $(BUILDDIR)/device/startup_stm32f407xx.o: $(CMSIS_PATH)/Source/Templates/gcc/sta
 
 # Finally, the default rules for the stm32 imported submodules not covered by the above.
 $(BUILDDIR)/hal/%.o: $(HAL_SRC)/%.c $(BUILDDIR)/hal
+	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
 $(BUILDDIR)/hal:
 	mkdir -p $@
 
 $(BUILDDIR)/usb/%.o: $(USB_SRC)/%.c $(BUILDDIR)/usb
+	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
 $(BUILDDIR)/usb:
 	mkdir -p $@
 
 $(BUILDDIR)/usbcdc/%.o: $(USBCDC_SRC)/%.c $(BUILDDIR)/usbcdc
+	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
 $(BUILDDIR)/usbcdc:
@@ -157,13 +160,20 @@ $(BUILDDIR)/usbimpl:
 
 # This one's for stm32 core files
 $(BUILDDIR)/%.o: $(STM32_PATH)/%.c
+	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
 # And this one's for the original grbl files
 $(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
+	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
+# This C module and header needs to be generated from pins.yaml:
+$(GRBL_PATH)/gpio_map.h $(GRBL_PATH)/gpio_map.c: pins.yaml
+	script/build-gpio-map.py 
+
 .S.o:
+	echo $(COMPILE) -x assembler-with-cpp -c $< -o $(BUILDDIR)/$@
 	$(COMPILE) -x assembler-with-cpp -c $< -o $(BUILDDIR)/$@
 # "-x assembler-with-cpp" should not be necessary since this is the default
 # file type for the .S (with capital S) extension. However, upper case
@@ -172,6 +182,9 @@ $(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
 
 .c.s:
 	$(COMPILE) -S $< -o $(BUILDDIR)/$@
+
+grbl/gpio_map.c grbl/gpio_map.h : pins.yaml script/build-gpio-map.py grbl/gpio_map.template.c grbl/gpio_map.template.h
+	script/build-gpio-map.py
 
 clean:
 	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf

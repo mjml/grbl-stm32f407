@@ -23,144 +23,50 @@
 
 void system_init()
 {
-  
   #ifdef ENABLE_RESET
   gpio_enable(&reset);
   #endif
 
   #ifdef ENABLE_FEED_HOLD
-  gpio_enable(&feedhld);
+  gpio_enable(&feed_hold);
   #endif
 
   #ifdef ENABLE_SAFETY_DOOR
-  gpio_enable(&safety);
+  gpio_enable(&safety_door);
   #endif
 
   #ifdef ENABLE_CYCLE_START
-  gpio_enable(&cstart);
+  gpio_enable(&cycle_start);
   #endif
 
-  #ifdef ENABLE_PROBE
-  gpio_enable(&probe);
-  #endif
-  
 }
 
 
-// Returns control pin state as a uint8 bitfield. Each bit indicates the input pin state, where
-// triggered is 1 and not triggered is 0. Invert mask is applied. Bitfield organization is
-// defined by the CONTROL_PIN_INDEX in the header file.
-uint8_t system_control_get_state()
+void system_gpio_callback_hook (gpio_t* pin)
 {
-  uint16_t field = gpio_read_port_mask (CONTROL_PORT, CONTROL_MASK);
-
-#ifdef INVERT_CONTROL_PIN_MASK
-  field ^= INVERT_CONTROL_PIN_MASK;
-#endif
-
-  return (uint8_t)(field);
-
-}
-
-void system_gpio_callback_hook (uint16_t field) 
-{
-  uint16_t n = field;
-  int pin = 0;
-  while (n) {
-    if (!(n & 0x01)) {
-      pin++;
-      n >>= 1;
-    } else break;
-  }
-
-  switch (pin) {
-    case CONTROL_RESET_BIT:
-      
-    break;
-
-    case CONTROL_FEED_HOLD_BIT:
-
-    break;
-
-    #if(CONTROL_SAFETY_DOOR_BIT != CONTROL_FEED_HOLD_BIT)
-    case CONTROL_SAFETY_DOOR_BIT:
-
-    break;
-    #endif
-
-    case CONTROL_CYCLE_START_BIT:
-
-    break;
-
-    case CONTROL_INPUT_BIT:
-
-    break;
-
-    case PROBE_BIT:
-
-    break;
-
-    case X_LIMIT_BIT:
-  
-    break;
-
-    case Y_LIMIT_BIT:
-
-    break;
-    case Z_LIMIT_BIT:
-
-    break;
-    case A_LIMIT_BIT:
-
-    break;
-    case B_LIMIT_BIT:
-
-    break;
-    #if(PIN_XHOME != PIN_XLIM)
-    case X_HOME_BIT:
-
-    break;
-    #endif
-    #if(PIN_YHOME != PIN_YLIM)
-    case Y_HOME_BIT:
-
-    break;
-    #endif
-    #if(PIN_ZHOME != PIN_ZLIM)
-    case Z_HOME_BIT:
-
-    break;
-    #endif
-    #if(PIN_AHOME != PIN_ALIM)
-    case A_HOME_BIT:
-
-    break;
-    #endif
-    #if(PIN_BHOME != PIN_BLIM)
-    case B_HOME_BIT:
-
-    break;
-    #endif
-    
+  #ifdef ENABLE_RESET
+  if (pin == &reset) {
 
   }
+  #endif
 
-  if (pin) {
-    if (bit_istrue(pin,CONTROL_PIN_INDEX_RESET)) {
-      mc_reset();
-    }
-    if (bit_istrue(pin,CONTROL_PIN_INDEX_CYCLE_START)) {
-      bit_true(sys_rt_exec_state, EXEC_CYCLE_START);
-    }
-    #ifndef ENABLE_SAFETY_DOOR_INPUT_PIN
-      if (bit_istrue(pin,CONTROL_PIN_INDEX_FEED_HOLD)) {
-        bit_true(sys_rt_exec_state, EXEC_FEED_HOLD);
-    #else
-      if (bit_istrue(pin,CONTROL_PIN_INDEX_SAFETY_DOOR)) {
-        bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
-    #endif
-    }
+  #ifdef ENABLE_FEED_HOLD
+  if (pin == &feed_hold) {
+
   }
+  #endif
+
+  #ifdef ENABLE_CYCLE_START
+  if (pin == &cycle_start) {
+
+  }
+  #endif
+
+  #ifdef ENABLE_SAFETY_DOOR
+  if (pin == &safety_door) {
+
+  } 
+  #endif
 
 }
 
@@ -168,10 +74,11 @@ void system_gpio_callback_hook (uint16_t field)
 // Returns if safety door is ajar(T) or closed(F), based on pin state.
 uint8_t system_check_safety_door_ajar()
 {
-  #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-    return(system_control_get_state() & CONTROL_PIN_INDEX_SAFETY_DOOR);
+  #ifdef ENABLE_SAFETY_DOOR
+  bool val = gpio_read_pin(&safety_door);
+  return val;
   #else
-    return(false); // Input pin not enabled, so just return that it's closed.
+  return false;
   #endif
 }
 
@@ -436,57 +343,49 @@ uint8_t system_check_travel_limits(float *target)
 
 // Special handlers for setting and clearing Grbl's real-time execution flags.
 void system_set_exec_state_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_state |= (mask);
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_clear_exec_state_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_state &= ~(mask);
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_set_exec_alarm(uint8_t code) {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_alarm = code;
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_clear_exec_alarm() {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_alarm = 0;
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_set_exec_motion_override_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_motion_override |= (mask);
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_set_exec_accessory_override_flag(uint8_t mask) {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_accessory_override |= (mask);
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_clear_exec_motion_overrides() {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_motion_override = 0;
-  SREG = sreg;
+  __enable_irq();
 }
 
 void system_clear_exec_accessory_overrides() {
-  uint8_t sreg = SREG;
-  cli();
+  __disable_irq();
   sys_rt_exec_accessory_override = 0;
-  SREG = sreg;
+  __enable_irq();
 }

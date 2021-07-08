@@ -243,8 +243,8 @@ def create_motor_defns (config, sdata):
         sdata.vardefines += "#define STEPPER_ENCODER_ALARM\n"
 
     sdata.varproto += "#define NUM_MOTORS {0}\n".format(len(motors))
-    sdata.varproto += "extern stepper_t motors[NUM_MOTORS];\n\n"
-    sdata.vardefn += "stepper_t motors[NUM_MOTORS] = {{\n{0} \n}};".format((',\n').join(blocks))
+    sdata.varproto += "extern stepper_t motor[NUM_MOTORS];\n\n"
+    sdata.vardefn += "stepper_t motor[NUM_MOTORS] = {{\n{0} \n}};".format((',\n').join(blocks))
     sdata.vardefn += "\n\n"
 
 
@@ -277,6 +277,7 @@ def create_limit_defns (config, sdata):
         sdata.vardefn += "gpio_t limit[NUM_LIMITS] = {{ \n{0} \n}};\n\n".format(",\n".join(blocks))
 
     homes = config["homes"]
+    sdata.varproto += "#define NUM_HOMES {0}\n".format(len(homes))
     if len(homes) > len(sdata.axes):
         raise RuntimeError("More homing switches than defined axes.")
     blocks = [""] * len(homes)
@@ -343,7 +344,7 @@ def create_spindle_defns(config, sdata):
     pass
 
 
-def create_code (config, outfn):
+def create_code (config):
     global sdata
     parse_axes(config, sdata)
     create_system_defns(config, sdata)
@@ -371,12 +372,12 @@ if __name__ == "__main__":
     sdata.template_c = readfile(template_cfn)
     sdata.template_h = readfile(template_hfn)
 
-    create_code(config, "gpio.map.c")
+    create_code(config)
     
     opts,args = getopt.getopt(sys.argv[1:],"n")
     opts = dict(opts)
-
-    if (opts['-n']):
+    if ('-n' in opts):
+        print("Test mode.\n")
         print(sdata.vardefines)
         print("\n-------\n")
         print(sdata.varproto)
@@ -387,7 +388,5 @@ if __name__ == "__main__":
         ch = Template(sdata.template_h).substitute(sdata.__dict__)
         writefile(output_cfn, ct)
         writefile(output_hfn, ch)
-        # writefile(template_cfn, ct)
-        # writefile(template_hfn, ch)
         
 
