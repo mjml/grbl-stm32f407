@@ -385,6 +385,7 @@ void settings_init() {
   }
 }
 
+/*
 // Returns step pin mask according to Grbl internal axis indexing.
 uint8_t get_step_pin_mask(uint8_t axis_idx) {
   if (axis_idx == X_AXIS) {
@@ -417,3 +418,4 @@ uint8_t get_limit_pin_mask(uint8_t axis_idx) {
   }
   return ((1 << Z_LIMIT_BIT));
 }
+*/

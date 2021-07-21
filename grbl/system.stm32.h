@@ -151,6 +151,9 @@ extern volatile uint8_t sys_rt_exec_accessory_override; // Global realtime execu
 // Initialize the serial protocol
 void system_init();
 
+// Our STM32 interrupt callback chains to this callback for dealing with any events related to system pins.
+void system_gpio_callback_hook (gpio_t* pin);
+
 // Returns bitfield of control pin states, organized by CONTROL_PIN_INDEX. (1=triggered, 0=not triggered).
 uint8_t system_control_get_state();
 

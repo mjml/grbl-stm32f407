@@ -126,6 +126,7 @@ def parse_axes (config, sdata):
         raise RuntimeError("Expected list of strings under \"axes\" label")
     for i in range(len(config["axes"])):
         sdata.axes.append(config["axes"][i])
+    sdata.vardefines += "#define NUM_AXES {1}\n".format(len(sdata.axes))
     for i,axis in enumerate(sdata.axes):
         sdata.vardefines += "#define AXIS_{0} {1}\n".format(axis.upper(),i)
 
@@ -243,8 +244,8 @@ def create_motor_defns (config, sdata):
         sdata.vardefines += "#define STEPPER_ENCODER_ALARM\n"
 
     sdata.varproto += "#define NUM_MOTORS {0}\n".format(len(motors))
-    sdata.varproto += "extern stepper_t motor[NUM_MOTORS];\n\n"
-    sdata.vardefn += "stepper_t motor[NUM_MOTORS] = {{\n{0} \n}};".format((',\n').join(blocks))
+    sdata.varproto += "extern stepper_motor_t motor[NUM_MOTORS];\n\n"
+    sdata.vardefn += "stepper_motor_t motor[NUM_MOTORS] = {{\n{0} \n}};".format((',\n').join(blocks))
     sdata.vardefn += "\n\n"
 
 

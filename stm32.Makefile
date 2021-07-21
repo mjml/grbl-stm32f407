@@ -32,8 +32,8 @@
 CLOCK       = 168000000
 
 SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
-             protocol.c stepper.c flash.c gpio.stm32.c gpio_map.c settings.stm32.c planner.c nuts_bolts.c limits.c jog.c\
-             print.c probe.c report.c system.stm32.c
+             protocol.c stepper.c flash.c gpio.stm32.c gpio_map.c settings.stm32.c planner.c nuts_bolts.c limits.stm32.c jog.c\
+             print.c probe.stm32.c report.c system.stm32.c
 BUILDDIR = build
 GRBL_PATH = grbl
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
@@ -169,8 +169,8 @@ $(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
 	$(COMPILE) -c $< -o $@
 
 # This C module and header needs to be generated from pins.yaml:
-$(GRBL_PATH)/gpio_map.h $(GRBL_PATH)/gpio_map.c: pins.yaml
-	script/build-gpio-map.py 
+grbl/gpio_map.c grbl/gpio_map.h : pins.yaml script/build-gpio-map.py grbl/gpio_map.template.c grbl/gpio_map.template.h
+	script/build-gpio-map.py
 
 .S.o:
 	echo $(COMPILE) -x assembler-with-cpp -c $< -o $(BUILDDIR)/$@
@@ -182,9 +182,6 @@ $(GRBL_PATH)/gpio_map.h $(GRBL_PATH)/gpio_map.c: pins.yaml
 
 .c.s:
 	$(COMPILE) -S $< -o $(BUILDDIR)/$@
-
-grbl/gpio_map.c grbl/gpio_map.h : pins.yaml script/build-gpio-map.py grbl/gpio_map.template.c grbl/gpio_map.template.h
-	script/build-gpio-map.py
 
 clean:
 	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf

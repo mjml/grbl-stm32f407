@@ -38,6 +38,7 @@ fi
 
 if [[ -n $rebuild ]]; then
 		echo "Rebuilding on request..."
+		echo rm $tgtfile
 		rm $tgtfile
 fi
 

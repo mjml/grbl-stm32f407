@@ -1,7 +1,10 @@
 #ifndef cpu_map_stm32_h
 #define cpu_map_stm32_h
 
+#pragma once
+
 #include <stm32f4xx_hal_gpio.h>
+#include <stdbool.h>
 
 /**
  * Hamster's GPIO layer. Runs on STM32 HAL.
@@ -19,14 +22,15 @@ typedef struct gpio_s {
     uint32_t      alternate;
 } gpio_t;
 
-typedef struct stepper {
+
+typedef struct stepper_motor_s {
     gpio_t  pul;
     gpio_t  dir;
     gpio_t  ena;
 #ifdef STEPPER_ENCODER_ALARM    
     gpio_t  alm;
 #endif
-} stepper_t;
+} stepper_motor_t;
 
 
 void      gpio_enable (gpio_t* gpio);

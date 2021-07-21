@@ -518,6 +518,7 @@ void st_generate_step_dir_invert_masks()
   step_port_invert_mask = 0;
   dir_port_invert_mask = 0;
   for (idx=0; idx<N_AXIS; idx++) {
+    /* TODO: These retrieval functions use the arduino port/pin format and will have to be replaced. */
     if (bit_istrue(settings.step_invert_mask,bit(idx))) { step_port_invert_mask |= get_step_pin_mask(idx); }
     if (bit_istrue(settings.dir_invert_mask,bit(idx))) { dir_port_invert_mask |= get_direction_pin_mask(idx); }
   }

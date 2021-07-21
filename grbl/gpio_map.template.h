@@ -1,11 +1,12 @@
 #pragma once
 
-#include "gpio.stm32.h"
-
-
 // Defines
 
 $vardefines
+
+#include "gpio.stm32.h"
+
+
 
 
 // Prototypes

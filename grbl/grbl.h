@@ -64,13 +64,6 @@
 // Define the Grbl system include files. NOTE: Do not alter organization.
 #include "config.h"
 #include "nuts_bolts.h"
-#ifdef AVR
-#include "settings.h"
-#include "system.h"
-#elif STM32
-#include "settings.stm32.h"
-#include "system.stm32.h"
-#endif
 
 #include "defaults.h"
 
@@ -81,6 +74,13 @@
 #include "gpio_map.h"
 #endif
 
+#ifdef AVR
+#include "settings.h"
+#include "system.h"
+#elif STM32
+#include "settings.stm32.h"
+#include "system.stm32.h"
+#endif
 
 #include "planner.h"
 #include "coolant_control.h"
@@ -94,7 +94,12 @@
 #include "motion_control.h"
 #include "planner.h"
 #include "print.h"
+#ifdef AVR
 #include "probe.h"
+#elif STM32
+#include "probe.stm32.h"
+#endif
+
 #include "protocol.h"
 #include "report.h"
 #ifdef AVR
