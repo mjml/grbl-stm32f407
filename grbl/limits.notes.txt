@@ -1,0 +1,114 @@
+Paraphrasing of limits.c:
+
+limits_go_home(uint8_t cycle_mask):
+
+    This is a modal function which carries out the machine's homing procedure with a few calls to the planner and stepper modules
+      to plan and execute the linear motions required by homing.
+
+    The cycle mask seems to be a axis-indexed bitmask ...
+
+    There is a local plan_line_data_t structure which is normally used by the planner for coordinated motions.
+        plan_line_data_t plan_data, *pl_data = &plan_data;
+
+    We zero this out to initialize, then set the flags for SYSTEM_MOTION and NO_FEED_OVERRIDE so that 
+      the user can't override stepper rates.
+    
+    We then set up more variables for homing:
+       uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1):
+       uint8_t step_pin[N_AXIS]:
+       
+       #ifdef ENABLE_DUAL_AXIS (dual-axis homing?)
+       step_pin_dual:
+       dual_axis_async_check:
+       float fail_distance:
+       #endif
+       
+       float target[N_AXIS]: Target position for each axis
+       float max_travel:
+       uint8_t idx: axis index
+
+    For each axis, we set up a uint8_t step_pin[idx] which is the stepper pin mask for that axis.
+    We set max_travel to the maximum distance that any particular axis may need to travel in order to be homed.
+    It's the maximum of the settings.max_travel[idx] over idx.
+
+    Then we set up a "search mode with approach at [a] seek rate" (seems to be a rapid move).
+    The homing rate comes from settings.homing_seek_rate.
+
+    A few more variables:
+        bool approach: true for the initial rapid, false when backing off
+        float homing_rate = settings.homing_seek_rate: the mvmt rate during this whole procedure, adjusted for approach/backoff
+        uint8_t limit_state:
+        uint8_t axis_lock:
+        uint8_t n_active_axis:
+    
+    Now we do-loop:
+        This seems to be a static loop that ensures that we perform at most a certain number (2N+1=3) of cycles before 
+
+        First zero out axislock and n_active_axis, then:
+        
+        For each bit(axis) in cycle_mask, set idx and n_active_axis to the next axis.
+            If using COREXY, we use sys_position[] to set desired position.
+            If we are homing that axis, set target[idx]. Position is positive for (!approach XOR homing_dir_mask[idx]), negative otherwise.
+        
+        Adjust homing_rate so that it's sqrt(N) faster if we're homing more axes simultaneously.
+
+        Perform homing cycle via the planning code:
+        pl_data->feed_rate <- homing_rate
+        plan_buffer_line(target, pl_data) populates the plan block for a linear move.
+
+        With a plan block in place,
+        sys.step_control = STEP_CONTROL_EXECUTE_SYS_MOTION essentially clears flags and prepares for a system move.
+        st_prep_buffer() prepares and fills the segment buffer from the planned plan_data block.
+        st_wake_up() initiates the plan/interrupt infrastructure to work executing the motion.
+
+        Now that motion is underway, quickly do-loop and check the limit states continuously:
+            
+            If we're approaching the switches, read the limit switches.
+            For each axis (idx):
+                If axis is in axislock,
+                    and if the limit state of that axis is 1, then ensure that the step_pin for that motor is zeroed out.
+            
+            Update sys.homing_axis_lock with the axis lock (presumably to communicate to st_ routines that this axis is no longer moving).
+
+            st_prep_buffer(): this "checks and preps" the segment buffer (presumably so that motion execution stays up-to-date.)
+
+            Now check if the safety door is opened, cycle_stop is pushed, or reset is issued:
+                If reset or safety door, alarm HOMING_FAIL_RESET or HOMING_FAIL_DOOR.
+                If we're in pulloff and the limit pins for cycle_mask are all zero, the switches were not found, alarm HOMING_FAIL_PULLOFF.
+                If we are in approach and CYCLE_STOP was issued, alarm HOMING_FAIL_APPROACH.
+                
+                Now if sys_rt_exec_alarm is true, stop the motors and protocol_execute_realtime(not sure what this does).
+                
+                Otherwise, pulloff completed. We clear EXEC_CYCLE_STOP and break from the quick do-loop.
+            
+            Keep on looping (checking and updating) until the axislock bits for all of STEP_MASK are zero.
+            The natural course of this loop is to break when pull-off is complete.
+
+        Now pull-off is over, st_reset to end the move and reset the segment buffer.
+        delay_ms() here to ensure limit switches don't bounce later.
+
+        approach = !approach: reverse direction for the next cycle
+
+        When approaching, use "settings.homing_feed_rate".
+        When pulling off, use "settings.homing_seek_rate".
+        
+        Perform these motion cycles until n_cycle == 0.
+
+    
+    
+    Now the machine is homed, for each axis, set the appropriate position 
+        This is either zero for HOMING_FORCE_SET_ORIGIN,
+            or for a positive homing direction, set to settings.max_travel[idx] + settings.homing_pulloff  (times the steps per mm)
+            or for a negative homing direction, set to -settings.homing_pulloff (times the steps per mm)
+
+        Note that homing_pulloff makes the machine origin some margin away from the limit switch.
+        This means (for the default negative direction) that the current position in machine coordinates is some small negative number for each axis.
+    
+        This makes sense because you want machine home to be off the switch entirely, 
+          but it also means that your axis is not at the origin when homing ends.
+        
+    Finally, we set sys.step_control = STEP_CONTROL_NORMAL_OP to resume normal step control.
+
+
+Paraphrasing of stepper.c:
+

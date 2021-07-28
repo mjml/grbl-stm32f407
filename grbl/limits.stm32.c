@@ -206,7 +206,7 @@ void limit_interrupt_handler ()
 // TODO: Move limit pin-specific calls to a general function for portability.
 void limits_go_home(uint8_t cycle_mask)
 {
-  if (sys.abort) { return; } // Block if system reset has been issued.
+  if (sys.abort) { return; } // Return if system reset has been issued.
 
   // Initialize plan data struct for homing motion. Spindle and coolant are disabled.
   plan_line_data_t plan_data;
