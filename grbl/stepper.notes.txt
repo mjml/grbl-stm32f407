@@ -1,0 +1,27 @@
+Notes for stepper.stm32.[ch]:
+
+The structures:
+
+typedef struct st_block_t: This is execution data for a "block", or a linear move in any number of axes.
+st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1]: The entire block buffer
+
+typedef struct segment_t: This is the unit of a ring buffer that stores short line segments. These represent
+segments of a linear move. Once "checked out" they are a commitment to that motion and cannot be modified.
+
+typedef struct stepper_t: Keeps running data for the stepper service routine. This includes counters for the Bresenham algo,
+  some flags, timing counters, bit fields for pulse and dir pins, step counter, and pointers to the current block and segment.
+
+typedef struct st_prep_t: Encapsulation struct for computing new segments from the currently executing block.
+
+
+The functions:
+
+st_wake_up(): This simply enables the stepper pins, then starts the stepper driver interrupt timer.
+  Under arduino, this is TIM1. We need to commit to a timer and configuration for this purpose under STM32.
+
+st_go_idle(): The complementary function to st_wake_up(), this immediately disables the timer interrupt and 
+  resets the associated prescaler.
+
+ISR(TIMER1_COMPA_vect): The stepper driver timer interrupt. Much written in the comments. 
+  The Bresenham algorithm is "keyed" on the timer interrupt.
+
