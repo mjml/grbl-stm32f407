@@ -108,7 +108,13 @@
 #include "serial.stm32.h"
 #endif
 #include "spindle_control.h"
+
+#ifdef AVR
 #include "stepper.h"
+#elif STM32
+#include "stepper.stm32.h"
+#endif
+
 #include "jog.h"
 
 #ifndef M_PI
