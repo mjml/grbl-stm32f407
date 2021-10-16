@@ -211,5 +211,11 @@ void OTG_FS_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
+extern TIM_HandleTypeDef st_timer;
+void TIM6_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&st_timer);
+}
+
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
