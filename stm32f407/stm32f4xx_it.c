@@ -212,9 +212,26 @@ void OTG_FS_IRQHandler(void)
 /* USER CODE BEGIN 1 */
 
 extern TIM_HandleTypeDef st_timer;
+extern TIM_HandleTypeDef st_rst_timer;
 void TIM7_IRQHandler(void)
 {
   HAL_TIM_IRQHandler(&st_timer);
+}
+
+void TIM6_DAC_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&st_rst_timer);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+{
+  if (htim == &st_timer) {
+    // Stepper timer
+    st_interrupt();
+  } else if (htim == &st_rst_timer) {
+    // Stepper reset timer
+    st_rst_interrupt();
+  }
 }
 
 /* USER CODE END 1 */

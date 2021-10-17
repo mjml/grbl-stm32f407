@@ -107,8 +107,12 @@ typedef struct {
 
   uint8_t execute_step;     // Flags step execution for each interrupt.
   uint8_t step_pulse_time;  // Step pulse reset time after step rise
+  
+  // STM32 Semantics: an additional level of indirection with gpio_t means that these bit fields 
+  //   are indexed by axis (0=x,1=y,etc) and not by hardware pin
   uint8_t step_outbits;         // The next stepping-bits to be output
-  uint8_t dir_outbits;
+  uint8_t dir_outbits;      
+
   #ifdef ENABLE_DUAL_AXIS
     uint8_t step_outbits_dual;
     uint8_t dir_outbits_dual;
@@ -252,24 +256,35 @@ void st_wake_up()
   // Enable Stepper Driver Interrupt
   TIMSK1 |= (1<<OCIE1A);
   */
-  
-  HAL_TIM_Base_Init(&st_timer);
-  st_timer.Init.Prescaler         = 0; // register value will be added to 1 to get the actual divisor
+  st_timer.Init.Prescaler         = (1-1); // register value will be added to 1 to get the actual divisor
   st_timer.Init.CounterMode       = TIM_COUNTERMODE_DOWN;
-  st_timer.Init.Period            = TICKS_PER_MICROSECOND;
+  st_timer.Init.Period            = TICKS_PER_MICROSECOND-1;
   st_timer.Init.ClockDivision     = TIM_CLOCKPRESCALER_DIV1;
-  st_timer.Init.RepetitionCounter = 0;
-  HAL_TIM_Base_Start_IT(&st_timer);
+  if (HAL_TIM_Base_Init(&st_timer) != HAL_OK) {
+    // TODO: Critical Error Here
+  }
+
+  st_rst_timer.Init.Prescaler = (8-1);
+  st_rst_timer.Init.CounterMode = TIM_COUNTERMODE_DOWN;
+  st_rst_timer.Init.Period = st.step_pulse_time;
+  st_rst_timer.Init.ClockDivision = TIM_CLOCKPRESCALER_DIV1;
+  if (HAL_TIM_Base_Init(&st_rst_timer) != HAL_OK) {
+    // TODO: Critical Error Here
+  }
   
+  HAL_TIM_Base_Start_IT(&st_timer);
 }
 
 
 // Stepper shutdown
 void st_go_idle()
 {
+  /*
   // Disable Stepper Driver Interrupt. Allow Stepper Port Reset Interrupt to finish, if active.
   TIMSK1 &= ~(1<<OCIE1A); // Disable Timer1 interrupt
   TCCR1B = (TCCR1B & ~((1<<CS12) | (1<<CS11))) | (1<<CS10); // Reset clock to no prescaling.
+  */
+  HAL_TIM_Base_Stop_IT(&st_timer);
   busy = false;
 
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
@@ -280,9 +295,23 @@ void st_go_idle()
     delay_ms(settings.stepper_idle_lock_time);
     pin_state = true; // Override. Disable steppers.
   }
+
+  /*
   if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { pin_state = !pin_state; } // Apply pin invert.
   if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
   else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+  */
+  // Note: inversion happens in gpio_enable/disable calls thanks to gpio_t settings.
+  if (pin_state) {
+    for (int i=0; i < NUM_MOTORS; i++) {
+      gpio_disable(&motor[i].ena);
+    }
+  } else {
+    for (int i=0; i < NUM_MOTORS; i++) {
+      gpio_enable(&motor[i].ena);
+    }
+  }
+
 }
 
 
@@ -334,15 +363,24 @@ void st_go_idle()
 // TODO: Replace direct updating of the int32 position counters in the ISR somehow. Perhaps use smaller
 // int8 variables and update position counters only when a segment completes. This can get complicated
 // with probing and homing cycles that require true real-time positions.
-ISR(TIMER1_COMPA_vect)
+//ISR(TIMER1_COMPA_vect)
+
+void st_interrupt()
 {
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
 
   // Set the direction pins a couple of nanoseconds before we step the steppers
+  /*
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
   #ifdef ENABLE_DUAL_AXIS
     DIRECTION_PORT_DUAL = (DIRECTION_PORT_DUAL & ~DIRECTION_MASK_DUAL) | (st.dir_outbits_dual & DIRECTION_MASK_DUAL);
   #endif
+  */
+  for (int i=0; i < NUM_MOTORS; i++) {
+    if (st.dir_outbits & (1<<i)) {
+      gpio_enable(&motor[i].dir);
+    }
+  }
 
   // Then pulse the stepping pins
   #ifdef STEP_PULSE_DELAY
@@ -350,21 +388,44 @@ ISR(TIMER1_COMPA_vect)
     #ifdef ENABLE_DUAL_AXIS
       st.step_bits_dual = (STEP_PORT_DUAL & ~STEP_MASK_DUAL) | st.step_outbits_dual;
     #endif
-  #else  // Normal operation
+  #else  // Direct operation
+    /*
     STEP_PORT = (STEP_PORT & ~STEP_MASK) | st.step_outbits;
     #ifdef ENABLE_DUAL_AXIS
       STEP_PORT_DUAL = (STEP_PORT_DUAL & ~STEP_MASK_DUAL) | st.step_outbits_dual;
     #endif
+    */
+    for (int i=0; i < NUM_MOTORS; i++) {
+      if (st.step_outbits & (1<<i)) {
+        gpio_enable(&motor[i].pul);
+      }
+    }
+    // TODO: Need a solution for dual-axis
+    /*
+    #ifdef ENABLE_DUAL_AXIS
+    for (int i=0; i < NUM_MOTORS; i++) {
+      if (st.step_outbits_dual & (1<<i)) {
+        gpio_enable(... need to map duals pin to pin ...)
+      }
+    }
+    #endif
+    */
   #endif
 
   // Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
+
+
+  /*
   TCNT0 = st.step_pulse_time; // Reload Timer0 counter
   TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
-
+  */
+  HAL_TIM_Base_Start_IT(&st_rst_timer);
   busy = true;
-  sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
-         // NOTE: The remaining code in this ISR will finish before returning to main program.
+
+  // MJ- There should be no need to do this: the interrupts are all prioritized via NVIC.
+  //sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
+           // NOTE: The remaining code in this ISR will finish before returning to main program.
 
   // If there is no step segment, attempt to pop one from the stepper buffer
   if (st.exec_segment == NULL) {
@@ -375,7 +436,13 @@ ISR(TIMER1_COMPA_vect)
 
       #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         // With AMASS is disabled, set timer prescaler for segments with slow step frequencies (< 250Hz).
-        TCCR1B = (TCCR1B & ~(0x07<<CS10)) | (st.exec_segment->prescaler<<CS10);
+        //TCCR1B = (TCCR1B & ~(0x07<<CS10)) | (st.exec_segment->prescaler<<CS10);
+        // NOTE: The AVR prescaler values are derived from a table (20-7) in the ATmega328P datasheet. 
+        //       There are only 8 possible values to account for prescalers ranging from 1 to 1024 and also account for external clock sources.
+        //       This means that the st.exec_segment->prescaler value must take on new semantics for STM32, since it is assigned
+        //         directly into the register.
+        // NOTE: STM32 only allows prescaler modification at an update event.
+        TIM7_PSC = st.exec_segment->prescaler;
       #endif
 
       // Initialize step segment timing per step and load number of steps to execute.
@@ -504,14 +571,18 @@ ISR(TIMER1_COMPA_vect)
 // This interrupt is enabled by ISR_TIMER1_COMPAREA when it sets the motor port bits to execute
 // a step. This ISR resets the motor port after a short period (settings.pulse_microseconds)
 // completing one step cycle.
-ISR(TIMER0_OVF_vect)
+//ISR(TIMER0_OVF_vect)
+void st_rst_interrupt()
 {
   // Reset stepping pins (leave the direction pins)
+  /*
   STEP_PORT = (STEP_PORT & ~STEP_MASK) | (step_port_invert_mask & STEP_MASK);
   #ifdef ENABLE_DUAL_AXIS
     STEP_PORT_DUAL = (STEP_PORT_DUAL & ~STEP_MASK_DUAL) | (step_port_invert_mask_dual & STEP_MASK_DUAL);
   #endif
   TCCR0B = 0; // Disable Timer0 to prevent re-entering this interrupt when it's not needed.
+  */
+  HAL_TIM_Base_Stop_IT(&st_rst_timer);
 }
 #ifdef STEP_PULSE_DELAY
   // This interrupt is used only when STEP_PULSE_DELAY is enabled. Here, the step pulse is

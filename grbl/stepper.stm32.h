@@ -29,9 +29,12 @@
 #endif
 
 // Redefine this macro since AVR is based on F_CPU:
-// The timers on AHB/APB1 suffice for this timebase, which maxes at 42Mhz when the prescaler is set to 1
+// The timers on APB1 suffice for this timebase, which maxes at 42Mhz when the prescaler is set to 1
 #undef TICKS_PER_MICROSECOND
-#define TICKS_PER_MICROSECOND (84000000 / 1000000)-1
+#define TICKS_PER_MICROSECOND (42000000 / 1000000)
+
+#define STEPPER_TIMBASE TIM7
+
 
 // Initialize and setup the stepper motor subsystem
 void stepper_init();
@@ -63,6 +66,15 @@ void st_update_plan_block_parameters();
 // Called by realtime status reporting if realtime rate reporting is enabled in config.h.
 float st_get_realtime_rate();
 
+// This is the interrupt callback for the main stepper pulse edge.
+void st_interrupt();
+
+// This is a separate callback for the timed down-edge of the stepper pulse.
+// GRBL uses two pulses instead of an OC mode so that the pulse is guaranteed to reset after an interval,
+//   regardless of whether the main pulse timer is still running or not.
+void st_rst_interrupt();
+
 TIM_HandleTypeDef st_timer;
+TIM_HandleTypeDef st_rst_timer;
 
 #endif
