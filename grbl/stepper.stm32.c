@@ -82,7 +82,7 @@ static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 // the planner, where the remaining planner block steps still can.
 typedef struct {
   uint16_t n_step;           // Number of step events to be executed for this segment
-  uint16_t cycles_per_tick;  // Step distance traveled per ISR tick, aka step rate.
+  uint16_t cycles_per_tick;  // Ticks per ISR update. AKA step period, determines step rate.
   uint8_t  st_block_index;   // Stepper block data index. Uses this information to execute this segment.
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     uint8_t amass_level;    // Indicates AMASS level for the ISR to execute this segment
@@ -98,9 +98,13 @@ static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct {
   // Used by the bresenham line algorithm
+  /*
   uint32_t counter_x,        // Counter variables for the bresenham line tracer
            counter_y,
            counter_z;
+           */
+  uint32_t counter[NUM_MOTORS];
+
   #ifdef STEP_PULSE_DELAY
     uint8_t step_bits;  // Stores out_bits output to complete the step pulse delay
   #endif
@@ -118,7 +122,7 @@ typedef struct {
     uint8_t dir_outbits_dual;
   #endif
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    uint32_t steps[N_AXIS];
+    uint32_t steps[NUM_MOTORS];
   #endif
 
   uint16_t step_count;       // Steps remaining in line segment motion
@@ -256,22 +260,6 @@ void st_wake_up()
   // Enable Stepper Driver Interrupt
   TIMSK1 |= (1<<OCIE1A);
   */
-  st_timer.Init.Prescaler         = (1-1); // register value will be added to 1 to get the actual divisor
-  st_timer.Init.CounterMode       = TIM_COUNTERMODE_DOWN;
-  st_timer.Init.Period            = TICKS_PER_MICROSECOND-1;
-  st_timer.Init.ClockDivision     = TIM_CLOCKPRESCALER_DIV1;
-  if (HAL_TIM_Base_Init(&st_timer) != HAL_OK) {
-    // TODO: Critical Error Here
-  }
-
-  st_rst_timer.Init.Prescaler = (8-1);
-  st_rst_timer.Init.CounterMode = TIM_COUNTERMODE_DOWN;
-  st_rst_timer.Init.Period = st.step_pulse_time;
-  st_rst_timer.Init.ClockDivision = TIM_CLOCKPRESCALER_DIV1;
-  if (HAL_TIM_Base_Init(&st_rst_timer) != HAL_OK) {
-    // TODO: Critical Error Here
-  }
-  
   HAL_TIM_Base_Start_IT(&st_timer);
 }
 
@@ -446,7 +434,14 @@ void st_interrupt()
       #endif
 
       // Initialize step segment timing per step and load number of steps to execute.
+      /*
       OCR1A = st.exec_segment->cycles_per_tick;
+      */
+      // CHECK: Not sure if stopping a timer within its interrupt will result in the proper behaviour.
+      HAL_TIM_Base_Stop_IT(&st_timer);
+      st_timer.Init.Period = st.exec_segment->cycles_per_tick;
+      HAL_TIM_Base_Start_IT(&st_timer);
+
       st.step_count = st.exec_segment->n_step; // NOTE: Can sometimes be zero when moving slow.
       // If the new segment starts a new planner block, initialize stepper variables and counters.
       // NOTE: When the segment data index changes, this indicates a new planner block.
@@ -455,7 +450,7 @@ void st_interrupt()
         st.exec_block = &st_block_buffer[st.exec_block_index];
 
         // Initialize Bresenham line and distance counters
-        st.counter_x = st.counter_y = st.counter_z = (st.exec_block->step_event_count >> 1);
+        st.counter[AXIS_X] = st.counter[AXIS_Y] = st.counter[AXIS_Z] = (st.exec_block->step_event_count >> 1);
       }
       st.dir_outbits = st.exec_block->direction_bits ^ dir_port_invert_mask;
       #ifdef ENABLE_DUAL_AXIS
@@ -496,6 +491,7 @@ void st_interrupt()
     st.step_outbits_dual = 0;
   #endif
 
+/*
   // Execute step displacement profile by Bresenham line algorithm
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_x += st.steps[X_AXIS];
@@ -505,9 +501,10 @@ void st_interrupt()
   if (st.counter_x > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<X_STEP_BIT);
     #if defined(ENABLE_DUAL_AXIS) && (DUAL_AXIS_SELECT == X_AXIS)
-      st.step_outbits_dual = (1<<DUAL_STEP_BIT);
+      st.step_outbits_dual = (1<<DUAL_AXIS);
     #endif
     st.counter_x -= st.exec_block->step_event_count;
+    
     if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
     else { sys_position[X_AXIS]++; }
   }
@@ -536,6 +533,24 @@ void st_interrupt()
     if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
     else { sys_position[Z_AXIS]++; }
   }
+  */
+  for (int i=0; i < NUM_MOTORS; i++) {
+  #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+    st.counter[i] += st.steps[i];
+  #else
+    st.counter[i] += st.exec_block->steps[i];
+  #endif
+    if (st.counter[i] > st.exec_block->step_event_count) {
+      st.step_outbits |= (1<<i);
+      st.counter[i] -= st.exec_block->step_event_count;
+
+      if (st.exec_block->direction_bits & (1<<i)) {
+        sys_position[i]--;
+      } else {
+        sys_position[i]++;
+      }
+    }
+  }
 
   // During a homing cycle, lock out and prevent desired axes from moving.
   if (sys.state == STATE_HOMING) { 
@@ -544,7 +559,6 @@ void st_interrupt()
       st.step_outbits_dual &= sys.homing_axis_lock_dual;
     #endif
   }
-
   st.step_count--; // Decrement step events count
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
@@ -582,14 +596,20 @@ void st_rst_interrupt()
   #endif
   TCCR0B = 0; // Disable Timer0 to prevent re-entering this interrupt when it's not needed.
   */
+  for (int i=0; i < NUM_MOTORS; i++) {
+    gpio_disable(&motor[i].pul);
+  }
   HAL_TIM_Base_Stop_IT(&st_rst_timer);
 }
+
+// TODO: In case of a pulse delay, we'll have to use OC mode and HAL_TIM_OC_DelayElapsedCallback() to invoke another callback here:
 #ifdef STEP_PULSE_DELAY
   // This interrupt is used only when STEP_PULSE_DELAY is enabled. Here, the step pulse is
   // initiated after the STEP_PULSE_DELAY time period has elapsed. The ISR TIMER2_OVF interrupt
   // will then trigger after the appropriate settings.pulse_microseconds, as in normal operation.
   // The new timing between direction, step pulse, and step complete events are setup in the
   // st_wake_up() routine.
+  /*
   ISR(TIMER0_COMPA_vect)
   {
     STEP_PORT = st.step_bits; // Begin step pulse.
@@ -597,19 +617,26 @@ void st_rst_interrupt()
       STEP_PORT_DUAL = st.step_bits_dual;
     #endif
   }
+  */
+  void st_delay_interrupt() {
+    
+  }
 #endif
 
 
 // Generates the step and direction port invert masks used in the Stepper Interrupt Driver.
 void st_generate_step_dir_invert_masks()
 {
-  uint8_t idx;
+  uint8_t i;
   step_port_invert_mask = 0;
   dir_port_invert_mask = 0;
-  for (idx=0; idx<N_AXIS; idx++) {
-    /* TODO: These retrieval functions use the arduino port/pin format and will have to be replaced. */
-    if (bit_istrue(settings.step_invert_mask,bit(idx))) { step_port_invert_mask |= get_step_pin_mask(idx); }
-    if (bit_istrue(settings.dir_invert_mask,bit(idx))) { dir_port_invert_mask |= get_direction_pin_mask(idx); }
+  for (i=0; i<NUM_MOTORS; i++) {
+    /*
+    if (bit_istrue(settings.step_invert_mask,bit(i))) { step_port_invert_mask |= get_step_pin_mask(i); }
+    if (bit_istrue(settings.dir_invert_mask,bit(i))) { dir_port_invert_mask |= get_direction_pin_mask(i); }
+    */
+    if (bit_istrue(settings.step_invert_mask,bit(i))) { step_port_invert_mask |= bit(i); }
+    if (bit_istrue(settings.dir_invert_mask,bit(i))) { dir_port_invert_mask |= bit(i); }
   }
   #ifdef ENABLE_DUAL_AXIS
     step_port_invert_mask_dual = 0;
@@ -641,8 +668,14 @@ void st_reset()
   st.dir_outbits = dir_port_invert_mask; // Initialize direction bits to default.
 
   // Initialize step and direction port pins.
+  /*
   STEP_PORT = (STEP_PORT & ~STEP_MASK) | step_port_invert_mask;
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | dir_port_invert_mask;
+  */
+  for (int i=0; i < NUM_MOTORS; i++) {
+    gpio_disable(&motor[i].pul);
+    gpio_disable(&motor[i].dir);
+  }
   
   #ifdef ENABLE_DUAL_AXIS
     st.dir_outbits_dual = dir_port_invert_mask_dual;
@@ -656,6 +689,7 @@ void st_reset()
 void stepper_init()
 {
   // Configure step and direction interface pins
+  /*
   STEP_DDR |= STEP_MASK;
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
   DIRECTION_DDR |= DIRECTION_MASK;
@@ -664,16 +698,31 @@ void stepper_init()
     STEP_DDR_DUAL |= STEP_MASK_DUAL;
     DIRECTION_DDR_DUAL |= DIRECTION_MASK_DUAL;
   #endif
-
+  */
+  // The pin/port direction bits don't need to be set here; they'll be initialized with gpio_enable() calls
+  //   in st_wake_up().
+  
   // Configure Timer 1: Stepper Driver Interrupt
+  /*
   TCCR1B &= ~(1<<WGM13); // waveform generation = 0100 = CTC
   TCCR1B |=  (1<<WGM12);
   TCCR1A &= ~((1<<WGM11) | (1<<WGM10));
   TCCR1A &= ~((1<<COM1A1) | (1<<COM1A0) | (1<<COM1B1) | (1<<COM1B0)); // Disconnect OC1 output
   // TCCR1B = (TCCR1B & ~((1<<CS12) | (1<<CS11))) | (1<<CS10); // Set in st_go_idle().
   // TIMSK1 &= ~(1<<OCIE1A);  // Set in st_go_idle().
-
+  */
+  memset(&st_timer, 0, sizeof(TIM_HandleTypeDef));
+  st_timer.Instance               = TIM7;
+  st_timer.Init.Prescaler         = (1-1); // register value will be added to 1 to get the actual divisor
+  st_timer.Init.CounterMode       = TIM_COUNTERMODE_DOWN;
+  st_timer.Init.Period            = TICKS_PER_MICROSECOND-1;
+  st_timer.Init.ClockDivision     = TIM_CLOCKPRESCALER_DIV1;
+  if (HAL_TIM_Base_Init(&st_timer) != HAL_OK) {
+    // TODO: Critical Error Here
+  }
+  
   // Configure Timer 0: Stepper Port Reset Interrupt
+  /*
   TIMSK0 &= ~((1<<OCIE0B) | (1<<OCIE0A) | (1<<TOIE0)); // Disconnect OC0 outputs and OVF interrupt.
   TCCR0A = 0; // Normal operation
   TCCR0B = 0; // Disable Timer0 until needed
@@ -681,6 +730,17 @@ void stepper_init()
   #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
+  */
+  memset(&st_rst_timer, 0, sizeof(TIM_HandleTypeDef));
+  st_rst_timer.Instance           = TIM6;
+  st_rst_timer.Init.Prescaler     = (8-1);
+  st_rst_timer.Init.CounterMode   = TIM_COUNTERMODE_DOWN;
+  st_rst_timer.Init.Period        = st.step_pulse_time;
+  st_rst_timer.Init.ClockDivision = TIM_CLOCKPRESCALER_DIV1;
+  if (HAL_TIM_Base_Init(&st_rst_timer) != HAL_OK) {
+    // TODO: Critical Error Here
+  }
+  
 }
 
 

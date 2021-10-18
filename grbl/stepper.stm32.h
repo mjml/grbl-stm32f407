@@ -31,7 +31,7 @@
 // Redefine this macro since AVR is based on F_CPU:
 // The timers on APB1 suffice for this timebase, which maxes at 42Mhz when the prescaler is set to 1
 #undef TICKS_PER_MICROSECOND
-#define TICKS_PER_MICROSECOND (42000000 / 1000000)
+#define TICKS_PER_MICROSECOND (uint32_t)(42000000 / 1000000)
 
 #define STEPPER_TIMBASE TIM7
 
