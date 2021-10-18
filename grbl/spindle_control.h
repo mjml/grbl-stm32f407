@@ -29,6 +29,8 @@
 #define SPINDLE_STATE_CW       bit(0)
 #define SPINDLE_STATE_CCW      bit(1)
 
+// Formerly in cpu_map.h
+#define SPINDLE_PWM_OFF_VALUE 0
 
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();
