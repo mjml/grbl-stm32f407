@@ -1,4 +1,4 @@
-![Logo](/doc/images/logo.svg|scale=50)
+![Logo](/doc/images/logo.svg)
 
 Micromachine is a CNC firmware forked from gnea/grbl.
 
