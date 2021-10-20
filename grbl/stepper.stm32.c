@@ -396,7 +396,7 @@ void st_interrupt()
       gpio_enable(&motor[i].dir);
     }
   }
-
+  
   // Then pulse the stepping pins
   #ifdef STEP_PULSE_DELAY
     st.step_bits = (STEP_PORT & ~STEP_MASK) | st.step_outbits; // Store out_bits to prevent overwriting.
@@ -646,7 +646,11 @@ void st_rst_interrupt()
   }
   */
   void st_delay_interrupt() {
-    
+    for (int i=0; i < NUM_MOTORS; i++) {
+      if (st.step_outbits & (1<<i)) {
+        gpio_enable(&motor[i].pul);
+      }
+    }
   }
 #endif
 
