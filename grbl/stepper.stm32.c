@@ -47,9 +47,36 @@
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
 	#define MAX_AMASS_LEVEL 3
 	// AMASS_LEVEL0: Normal operation. No AMASS. No upper cutoff frequency. Starts at LEVEL1 cutoff frequency.
+  /*
+  AVR settings designed around F_CPU = stepper timer base frequency
 	#define AMASS_LEVEL1 (F_CPU/8000) // Over-drives ISR (x2). Defined as F_CPU/(Cutoff frequency in Hz)
 	#define AMASS_LEVEL2 (F_CPU/4000) // Over-drives ISR (x4)
 	#define AMASS_LEVEL3 (F_CPU/2000) // Over-drives ISR (x8)
+  */
+
+  /*
+  STM32 settings designed around STEP_TICK_FREQ = 42000000
+  and:
+    200 steps/rev * 50 microsteps/step = 10000 microsteps/rev (stepper driver setting)
+    at 5mm pitch,
+      (10000ustep/rev) / (5mm/rev) = 2000ustep/mm
+    So to produce AMASS frequencies for the STM32 that are equivalent in rate/space to the Arduino's on the woodpecker,
+      we get:
+        AMASS_LEVEL1: (10mm/s) * (2000ustep/mm) = 20000Hz
+        AMASS_LEVEL2: (5mm/s)  * (2000ustep/mm) = 10000Hz
+        AMASS_LEVEL3: (2.5mm/s) * (2000ustep/mm) = 5000Hz
+      Where the first factor on the lefthand side is the velocity threshold that is "copied over" from the Woodpecker/3018 default settings.
+
+  */
+  #define STEP_TICK_FREQ 42000000
+  #define AMASS_FREQ1  20000
+  #define AMASS_FREQ2  10000
+  #define AMASS_FREQ3  5000
+  #define AMASS_LEVEL1 (STEP_TICK_FREQ/AMASS_FREQ1)  // Over-drives ISR (x2). Defined as STEP_TICK_FREQ/(Cutoff frequency in Hz)
+  #define AMASS_LEVEL2 (STEP_TICK_FREQ/AMASS_FREQ2)  // Over-drives ISR (x4)
+  #define AMASS_LEVEL3 (STEP_TICK_FREQ/AMASS_FREQ3)  // Over-drives ISR (x8)
+  
+  // Be careful! These AMASS_LEVELx values must fit in a 16-bit timer register.
 
   #if MAX_AMASS_LEVEL <= 0
     error "AMASS must have 1 or more levels to operate correctly."
