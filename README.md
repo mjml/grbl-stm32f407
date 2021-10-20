@@ -1,11 +1,11 @@
-![Logo](/doc/images/hamster-logo.png)
+![Logo](/doc/images/logo.svg)
 
-(pronounced Hamster)
+Micromachine is a CNC firmware forked from gnea/grbl.
 
-This project is a direct fork of classic gnea/grbl, but I'm modifying it to work on an STM32F407ZETG board that I got from AliExpress.
+Instead of an Arduino, it runs on the STM32F407 chip, running at 168MHz.
 
-Running at 168MHz, it will provide faster pulse rates and work with larger Leadshine stepper drivers.
+This allows it to provide faster pulse rates, and to work with larger industrial grade stepper drivers (e.g. Leadshine and similar).
 
-It will also allow me to add facilities for an ATC spindle, customizable lighting, and maybe a speaker for audible alerts during jobs.
+The plan is to implement support for an ATC spindle and to accept commands from a CAM program derived from grbl-friendly Candle.
 
 ![System Architecture](/doc/SystemWiring.svg)
