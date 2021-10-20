@@ -57,7 +57,7 @@
   /*
   STM32 settings designed around STEP_TICK_FREQ = 42000000
   and:
-    200 steps/rev * 50 microsteps/step = 10000 microsteps/rev (stepper driver setting)
+    200 steps/rev * 50 ustep/step = 10000 ustep/rev (stepper driver setting)
     at 5mm pitch,
       (10000ustep/rev) / (5mm/rev) = 2000ustep/mm
     So to produce AMASS frequencies for the STM32 that are equivalent in rate/space to the Arduino's on the woodpecker,
