@@ -30,11 +30,14 @@
 
 // Redefine this macro since AVR is based on F_CPU:
 // The timers on APB1 suffice for this timebase, which maxes at 42Mhz when the prescaler is set to 1
+#define STEP_TICK_FREQ 42000000
 #undef TICKS_PER_MICROSECOND
-#define TICKS_PER_MICROSECOND (uint32_t)(42000000 / 1000000)
+#define TICKS_PER_MICROSECOND (uint32_t)(STEP_TICK_FREQ / 1000000)
 
-#define STEPPER_TIMBASE TIM7
-
+#define STEPPER_TIMBASE               TIM7
+#define STEPPER_TIMBASE_CLK_ENABLE  __TIM7_CLK_ENABLE
+#define STEPPER_RSTBASE               TIM5
+#define STEPPER_RSTBASE_CLK_ENABLE  __TIM5_CLK_ENABLE
 
 // Initialize and setup the stepper motor subsystem
 void stepper_init();

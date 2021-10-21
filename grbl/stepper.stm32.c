@@ -68,7 +68,6 @@
       Where the first factor on the lefthand side is the velocity threshold that is "copied over" from the Woodpecker/3018 default settings.
 
   */
-  #define STEP_TICK_FREQ 42000000
   #define AMASS_FREQ1  20000
   #define AMASS_FREQ2  10000
   #define AMASS_FREQ3  5000
@@ -756,11 +755,12 @@ void stepper_init()
   // TIMSK1 &= ~(1<<OCIE1A);  // Set in st_go_idle().
   */
   memset(&st_timer, 0, sizeof(TIM_HandleTypeDef));
-  st_timer.Instance               = TIM7;
+  st_timer.Instance               = STEPPER_TIMBASE;
   st_timer.Init.Prescaler         = (1-1); // register value will be added to 1 to get the actual divisor
   st_timer.Init.CounterMode       = TIM_COUNTERMODE_DOWN;
   st_timer.Init.Period            = TICKS_PER_MICROSECOND-1;
   st_timer.Init.ClockDivision     = TIM_CLOCKPRESCALER_DIV1;
+  STEPPER_TIMBASE_CLK_ENABLE();
   if (HAL_TIM_Base_Init(&st_timer) != HAL_OK) {
     // TODO: Critical Error Here
   }
@@ -776,27 +776,30 @@ void stepper_init()
   #endif
   */
   memset(&st_rst_timer, 0, sizeof(TIM_HandleTypeDef));
-  st_rst_timer.Instance           = TIM6;
+  st_rst_timer.Instance           = STEPPER_RSTBASE;
   st_rst_timer.Init.Prescaler     = (8-1);
-  st_rst_timer.Init.CounterMode   = TIM_COUNTERMODE_DOWN;
+  st_rst_timer.Init.CounterMode   = TIM_COUNTERMODE_UP;
   st_rst_timer.Init.Period        = st.step_pulse_time;
   st_rst_timer.Init.ClockDivision = TIM_CLOCKPRESCALER_DIV1;
   #ifndef STEP_PULSE_DELAY
+  STEPPER_RSTBASE_CLK_ENABLE();
   if (HAL_TIM_Base_Init(&st_rst_timer) != HAL_OK) {
     // TODO: Critical Error Here
   }
   #else
-  #endif
   if (HAL_TIM_OC_Init(&st_rst_timer) != HAL_OK) {
     // TODO: Critical Error Here
   }
   TIM_OC_InitTypeDef ocConfig;
   memset(&ocConfig,0,sizeof(TIM_OC_InitTypeDef));
-  ocConfig.OCMode = TIM_OCMODE_INACTIVE;
-  ocConfig.Pulse = ()
-  if (HAL_TIM_OC_ConfigChannel(&st_rst_timer, &ocConfig, 0) != HAL_OK) {
-
+  ocConfig.OCMode        = TIM_OCMODE_INACTIVE;
+  ocConfig.Pulse         = (STEP_PULSE_DELAY * TICKS_PER_MICROSECOND) >> 3;
+  ocConfig.OCPolarity    = TIM_OCPOLARITY_HIGH;
+  ocConfig.OCNPolarity   = TIM_OCNPOLARITY_LOW;  
+  if (HAL_TIM_OC_ConfigChannel(&st_rst_timer, & ocConfig, 0) != HAL_OK) {
+    // TODO: Critical Error Here
   }
+  #endif
   
 }
 
