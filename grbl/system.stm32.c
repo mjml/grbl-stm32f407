@@ -46,25 +46,25 @@ void system_gpio_callback_hook (gpio_t* pin)
 {
   #ifdef ENABLE_RESET
   if (pin == &reset) {
-
+    // TODO: 
   }
   #endif
 
   #ifdef ENABLE_FEED_HOLD
   if (pin == &feed_hold) {
-
+    // TODO: 
   }
   #endif
 
   #ifdef ENABLE_CYCLE_START
   if (pin == &cycle_start) {
-
+    // TODO: 
   }
   #endif
 
   #ifdef ENABLE_SAFETY_DOOR
   if (pin == &safety_door) {
-
+    // TODO: 
   } 
   #endif
 

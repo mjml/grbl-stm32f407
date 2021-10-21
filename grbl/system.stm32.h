@@ -63,6 +63,7 @@
 #define STATE_JOG           bit(5) // Jogging mode.
 #define STATE_SAFETY_DOOR   bit(6) // Safety door is ajar. Feed holds and de-energizes system.
 #define STATE_SLEEP         bit(7) // Sleep state.
+#define STATE_MANUAL_ATC    bit(8) // In a "user-driven" ATC operation.
 
 // Define system suspend flags. Used in various ways to manage suspend states and procedures.
 #define SUSPEND_DISABLE           0      // Must be zero.
@@ -107,7 +108,7 @@
 
 // Define global system variables
 typedef struct {
-  uint8_t state;               // Tracks the current system state of Grbl.
+  uint16_t state;              // Tracks the current system state of Grbl.
   uint8_t abort;               // System abort flag. Forces exit back to main loop for reset.             
   uint8_t suspend;             // System suspend bitflag variable that manages holds, cancels, and safety door.
   uint8_t soft_limit;          // Tracks soft limit errors for the state machine. (boolean)
