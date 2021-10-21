@@ -21,6 +21,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "grbl.h"
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -122,7 +123,22 @@ void HAL_RTC_MspDeInit(RTC_HandleTypeDef* hrtc)
 }
 
 /* USER CODE BEGIN 1 */
+void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim)
+{
+  // Configuration of the timer clock sources through HAL is done here, 
+  //   but the timer clocks themselves and the timer settings
+  //   are done in application code (see stepper.stm32.[ch]).
+  if (htim == &st_timer) {
 
+  } else if (htim == &st_rst_timer) {
+    
+  }
+}
+
+void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim)
+{
+
+}
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
