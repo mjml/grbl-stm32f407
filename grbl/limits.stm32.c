@@ -321,13 +321,14 @@ void limits_go_home(uint8_t cycle_mask)
         // Check limit state. Lock out cycle axes when they change.
         limit_state = limits_get_state();
         for (idx=0; idx<N_AXIS; idx++) {
-          if (axislock & step_pin[idx]) {
+          if (/*axislock & step_pin[idx]*/ axislock & bit(idx)) {
             if (limit_state & (1 << idx)) {
               #ifdef COREXY
                 if (idx==Z_AXIS) { axislock &= ~(step_pin[Z_AXIS]); }
                 else { axislock &= ~(step_pin[A_MOTOR]|step_pin[B_MOTOR]); }
               #else
-                axislock &= ~(step_pin[idx]);
+                //axislock &= ~(step_pin[idx]);
+                axislock &= ~bit(idx);
                 #ifdef ENABLE_DUAL_AXIS
                   if (idx == DUAL_AXIS_SELECT) { dual_axis_async_check |= DUAL_AXIS_CHECK_TRIGGER_1; }
                 #endif
@@ -335,6 +336,7 @@ void limits_go_home(uint8_t cycle_mask)
             }
           }
         }
+        // Note that this field is now indexed by AXIS and not by Arduino pin assignment.
         sys.homing_axis_lock = axislock;
         #ifdef ENABLE_DUAL_AXIS
           if (sys.homing_axis_lock_dual) { // NOTE: Only true when homing dual axis.
@@ -390,9 +392,10 @@ void limits_go_home(uint8_t cycle_mask)
       }
 
     #ifdef ENABLE_DUAL_AXIS
-      } while ((STEP_MASK & axislock) || (sys.homing_axis_lock_dual));
+      /* } while ((STEP_MASK & axislock) || (sys.homing_axis_lock_dual)); */
+      } while (axislock || sys.homing_axis_lock_dual);
     #else
-      } while (STEP_MASK & axislock);
+      } /* while (STEP_MASK & axislock); */ while (axislock);
     #endif
 
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
