@@ -25,7 +25,7 @@ st_wake_up(): This simply enables the stepper pins, then starts the stepper driv
 st_go_idle(): The complementary function to st_wake_up(), this immediately disables the timer interrupt and 
   resets the associated prescaler.
 
-ISR(TIMER1_COMPA_vect): The stepper driver timer interrupt. Much written in the comments. 
+ISR(TIMER1_COMPA_vect): The stepper driver timer interrupt.
   The Bresenham algorithm is "keyed" on the timer interrupt.
   There are a few places where this function touches hardware:
     - The DIRECTION_PORT pins are set first
