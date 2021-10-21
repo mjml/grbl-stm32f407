@@ -84,12 +84,12 @@
 #endif
 
 
-// Stores the planner block Bresenham algorithm execution data for the segments in the segment
-// buffer. Normally, this buffer is partially in-use, but, for the worst case scenario, it will
-// never exceed the number of accessible stepper buffer segments (SEGMENT_BUFFER_SIZE-1).
-// NOTE: This data is copied from the prepped planner blocks so that the planner blocks may be
-// discarded when entirely consumed and completed by the segment buffer. Also, AMASS alters this
-// data for its own use.
+/*
+  Planner blocks contain initial step counts and directions for a linear move.
+  These blocks are "checked out" into the segment buffer given below, where
+  AMASS adjusts the total count and the spacing of the pulses to reduce
+  low-frequency aliasing, especially of the minor axes.
+*/
 typedef struct {
   uint32_t steps[N_AXIS];
   uint32_t step_event_count;
@@ -103,10 +103,15 @@ typedef struct {
 } st_block_t;
 static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 
-// Primary stepper segment ring buffer. Contains small, short line segments for the stepper
-// algorithm to execute, which are "checked-out" incrementally from the first block in the
-// planner buffer. Once "checked-out", the steps in the segments buffer cannot be modified by
-// the planner, where the remaining planner block steps still can.
+/*
+  Primary stepper segment ring buffer. Contains small, short line segments for the stepper
+  algorithm to execute, which are "checked-out" incrementally from the first block in the
+  planner buffer. Once "checked-out", the steps in the segments buffer cannot be modified by
+  the planner, where the remaining planner block steps still can.
+  Note that the number of steps in each axis is still determined by the corresponding block,
+    and this structure only adjusts the total step events and the spacing between them.
+  This is the primary vessel for the AMASS algorithm.
+*/
 typedef struct {
   uint16_t n_step;           // Number of step events to be executed for this segment
   uint16_t cycles_per_tick;  // Ticks per ISR update. AKA step period, determines step rate.
@@ -122,7 +127,10 @@ typedef struct {
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
-// Stepper ISR data struct. Contains the running data for the main stepper ISR.
+/* 
+  Stepper ISR data struct. Contains the running data for the main stepper ISR.
+  This is essentially a singleton that contains the running execution data for the stepper module.
+*/
 typedef struct {
   // Used by the bresenham line algorithm
   /*
@@ -159,12 +167,12 @@ typedef struct {
 } stepper_t;
 static stepper_t st;
 
-// Step segment ring buffer indices
+/* Step segment ring buffer indices */
 static volatile uint8_t segment_buffer_tail;
 static uint8_t segment_buffer_head;
 static uint8_t segment_next_head;
 
-// Step and direction port invert masks.
+/* Step and direction port invert masks. */
 static uint8_t step_port_invert_mask;
 static uint8_t dir_port_invert_mask;
 #ifdef ENABLE_DUAL_AXIS
@@ -172,16 +180,20 @@ static uint8_t dir_port_invert_mask;
   static uint8_t dir_port_invert_mask_dual;
 #endif
 
-// Used to avoid ISR nesting of the "Stepper Driver Interrupt". Should never occur though.
+/* Used to avoid ISR nesting of the "Stepper Driver Interrupt". Should never occur though. */
 static volatile uint8_t busy;
 
-// Pointers for the step segment being prepped from the planner buffer. Accessed only by the
-// main program. Pointers may be planning segments or planner blocks ahead of what being executed.
+/* 
+  Pointers for the step segment being prepped from the planner buffer. Accessed only by the
+  main program. Pointers may be planning segments or planner blocks ahead of what being executed.
+*/
 static plan_block_t *pl_block;     // Pointer to the planner block being prepped
 static st_block_t *st_prep_block;  // Pointer to the stepper block data being prepped
 
-// Segment preparation data struct. Contains all the necessary information to compute new segments
-// based on the current executing planner block.
+/*
+  Segment preparation data struct. Contains all the necessary information to compute new segments
+  based on the current executing planner block.
+*/
 typedef struct {
   uint8_t st_block_index;  // Index of stepper common data block being prepped
   uint8_t recalculate_flag;
@@ -254,8 +266,10 @@ static st_prep_t prep;
 */
 
 
-// Stepper state initialization. Cycle should only start if the st.cycle_start flag is
-// enabled. Startup init and limits call this function but shouldn't start the cycle.
+/* 
+  Stepper state initialization. Cycle should only start if the st.cycle_start flag is
+  enabled. Startup init and limits call this function but shouldn't start the cycle.
+*/
 void st_wake_up()
 {
   /*
@@ -291,7 +305,7 @@ void st_wake_up()
 }
 
 
-// Stepper shutdown
+/* Stepper shutdown */
 void st_go_idle()
 {
   /*
@@ -303,12 +317,12 @@ void st_go_idle()
   busy = false;
 
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-  bool pin_state = false; // Keep enabled.
+  bool pin_state = false; // Set EN pins low by default.
   if (((settings.stepper_idle_lock_time != 0xff) || sys_rt_exec_alarm || sys.state == STATE_SLEEP) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
-    pin_state = true; // Override. Disable steppers.
+    pin_state = true; // Override. Keep steppers enabled in these states.
   }
 
   /*
@@ -319,11 +333,11 @@ void st_go_idle()
   // Note: inversion happens in gpio_enable/disable calls thanks to gpio_t settings.
   if (pin_state) {
     for (int i=0; i < NUM_MOTORS; i++) {
-      gpio_disable(&motor[i].ena);
+      gpio_enable(&motor[i].ena);
     }
   } else {
     for (int i=0; i < NUM_MOTORS; i++) {
-      gpio_enable(&motor[i].ena);
+      gpio_disable(&motor[i].ena);
     }
   }
 
@@ -379,7 +393,6 @@ void st_go_idle()
 // int8 variables and update position counters only when a segment completes. This can get complicated
 // with probing and homing cycles that require true real-time positions.
 //ISR(TIMER1_COMPA_vect)
-
 void st_interrupt()
 {
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
@@ -396,7 +409,7 @@ void st_interrupt()
       gpio_enable(&motor[i].dir);
     }
   }
-  
+
   // Then pulse the stepping pins
   #ifdef STEP_PULSE_DELAY
     st.step_bits = (STEP_PORT & ~STEP_MASK) | st.step_outbits; // Store out_bits to prevent overwriting.
@@ -768,8 +781,21 @@ void stepper_init()
   st_rst_timer.Init.CounterMode   = TIM_COUNTERMODE_DOWN;
   st_rst_timer.Init.Period        = st.step_pulse_time;
   st_rst_timer.Init.ClockDivision = TIM_CLOCKPRESCALER_DIV1;
+  #ifndef STEP_PULSE_DELAY
   if (HAL_TIM_Base_Init(&st_rst_timer) != HAL_OK) {
     // TODO: Critical Error Here
+  }
+  #else
+  #endif
+  if (HAL_TIM_OC_Init(&st_rst_timer) != HAL_OK) {
+    // TODO: Critical Error Here
+  }
+  TIM_OC_InitTypeDef ocConfig;
+  memset(&ocConfig,0,sizeof(TIM_OC_InitTypeDef));
+  ocConfig.OCMode = TIM_OCMODE_INACTIVE;
+  ocConfig.Pulse = ()
+  if (HAL_TIM_OC_ConfigChannel(&st_rst_timer, &ocConfig, 0) != HAL_OK) {
+
   }
   
 }
