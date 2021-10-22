@@ -184,7 +184,7 @@ grbl/gpio_map.c grbl/gpio_map.h : pins.yaml script/build-gpio-map.py grbl/gpio_m
 	$(COMPILE) -S $< -o $(BUILDDIR)/$@
 
 clean:
-	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf
+	rm -f grbl.hex $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/*.elf grbl/gpio_map.[ch]
 
 # file targets:
 $(BUILDDIR)/main.elf: $(GRBL_OBJECTS) $(CMSIS_OBJECTS) $(HAL_OBJECTS) $(USB_OBJECTS) $(USBCDC_OBJECTS)
