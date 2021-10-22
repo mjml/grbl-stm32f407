@@ -126,7 +126,7 @@ def parse_axes (config, sdata):
         raise RuntimeError("Expected list of strings under \"axes\" label")
     for i in range(len(config["axes"])):
         sdata.axes.append(config["axes"][i])
-    sdata.vardefines += "#define NUM_AXES {1}\n".format(len(sdata.axes))
+    sdata.vardefines += "#define NUM_AXES {0}\n".format(len(sdata.axes))
     for i,axis in enumerate(sdata.axes):
         sdata.vardefines += "#define AXIS_{0} {1}\n".format(axis.upper(),i)
 
@@ -342,7 +342,10 @@ def create_interrupt_handler (config,sdata):
 
 
 def create_spindle_defns(config, sdata):
-    pass
+    spindle = config["spindle"]
+    title = "///// Spindle /////////////////////////\n"
+    sdata.varproto   += title + "extern gpio_t spindle_en;\n\n"
+    sdata.vardefn    += title + "gpio_t spindle_en;\n\n"
 
 
 def create_code (config):
