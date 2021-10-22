@@ -1,0 +1,41 @@
+Immediate errors / differences from grbl:
+
+Certain hardware macros are missing:
+  SPINDLE_PWM_DDR
+  SPINDLE_PWM_BIT
+  SPINDLE_TCCRA_REGISTER / SPINDLE_TCCRA_INIT_MASK
+  SPINDLE_TCCRB_REGISTER / SPINDLE_TCCRB_INIT_MASK
+  SPINDLE_DIRECTION_DDR / SPINDLE_DIRECTION_BIT
+  SPINDLE_PWM_RANGE
+  SPINDLE_COMB_BIT
+  SPINDLE_PWM_MAX_VALUE
+  SPINDLE_PWM_MIN_VALUE
+  SPINDLE_DIRECTION_PORT
+
+grbl {
+    The spindle always has (at least) an enable pin.
+    Woodpecker uses this on/off single-direction configuration on B3(D11).
+    However, grbl code allows for a dir pin as well, and a variable speed option.
+
+    The standard cases go:
+        Enable only: ena on B4/D12
+        Enable on B4/D12, dir on B5/D13
+        Variable speed pwm on B3/D11, ena on B5/D13 
+          * (Woodpecker's suspected config, but they just wire B5/D13 to one of the expansion terminal pins. It is used as a SCK when updating firmware.
+        Variable speed pwm on B3/D11, dir on B5/D13
+
+    This is defined as VARIABLE_SPINDLE but not USE_SPINDLE_DIR_AS_ENABLE_PIN.
+
+    In a dual-axis setup, there is no spindle direction control nor coolant mist pins.
+
+    A variable-speed spindle has an associated PWM timer.
+
+    The output pin is controlled directly by the timer circuitry rather than manually (classic PWM).
+}
+
+mm {
+    There is no alarm port or functionality.
+    There are no databus pins to program a VFD -- it would have to be done manually.
+
+    Best would be variable speed on B3, ena on B5, no direction.
+}
