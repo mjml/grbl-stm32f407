@@ -70,7 +70,7 @@ homes:
     home:   E11
 
 coolant:
-  flood:   Z99 od
+  flood:   B10 od
   mist:    B11 od
 
 atc:

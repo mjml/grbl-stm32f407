@@ -85,7 +85,13 @@
 #endif
 
 #include "planner.h"
+
+#ifdef AVR
 #include "coolant_control.h"
+#elif STM32
+#include "coolant_control.stm32.h"
+#endif
+
 #ifdef AVR
 #include "eeprom.h"
 #elif STM32

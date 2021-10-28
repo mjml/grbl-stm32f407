@@ -182,6 +182,25 @@ def create_system_defns (config, sdata):
     sdata.varproto += "\n"
 
 
+def create_coolant_defns(config, sdata):
+    coolant = config["coolant"]
+    title = "///// Coolant /////////////////////////\n"
+    if "flood" not in coolant:
+        raise "Expected coolant/flood pin mapping not found."
+        return
+
+    sdata.varproto   += title
+    sdata.vardefn    += title
+    for k,s in coolant.items():
+        pd = PinDefinition.parse(k,s)
+        if k == "mist":
+            sdata.vardefines += "#define ENABLE_M7"
+        sdata.varproto += "extern gpio_t {0};\n".format(k)
+        sdata.vardefn  += "gpio_t {0} = {1};\n".format(k,pd.defnexpr)
+    
+    sdata.vardefn  += "\n"
+    sdata.varproto += "\n"
+
 def create_probe_defns (config, sdata):
     '''
     The standard grbl probe is named 'contact' or 'grbl', while we use a different pin for ATC tool length probe.
@@ -363,11 +382,7 @@ def create_spindle_defns(config, sdata):
         sdata.vardefn  += "gpio_t " + "spindle_" + pd.name + " = " + pd.defnexpr +";\n";
     sdata.varproto += "\n"
     sdata.vardefn += "\n"
-        
-def create_coolant_defns(config, sdata):
-    coolant = config["coolant"]
-    title = "///// Coolant /////////////////////////\n"
-    sdata.varproto   += title + ""
+
 
 def create_code (config):
     global sdata

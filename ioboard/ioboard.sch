@@ -531,20 +531,12 @@ Text Label 6490 6400 2    50   ~ 10
 YPUL-
 Wire Wire Line
 	6000 6400 6490 6400
-Text Label 7200 6800 2    50   ~ 10
+Text Label 3460 4870 0    50   ~ 10
 SPPWM
 Wire Wire Line
 	6000 6200 6500 6200
 Text Label 6500 6600 2    50   ~ 10
-XENA-
-Text Label 6510 6800 2    50   ~ 10
-YENA-
-Text Label 6500 7000 2    50   ~ 10
-ZENA-
-Text Label 6500 7200 2    50   ~ 10
-AENA-
-Text Label 6500 7400 2    50   ~ 10
-BENA-
+STEN-
 Text Label 4400 11600 0    50   ~ 0
 VCC
 Wire Wire Line
@@ -572,14 +564,6 @@ Wire Wire Line
 	6800 11200 6800 11800
 Wire Wire Line
 	6000 6600 6500 6600
-Wire Wire Line
-	6000 6800 6510 6800
-Wire Wire Line
-	6000 7000 6500 7000
-Wire Wire Line
-	6000 7200 6500 7200
-Wire Wire Line
-	6000 7400 6500 7400
 $Comp
 L power:VCC #PWR?
 U 1 1 60C717BA
@@ -870,22 +854,22 @@ Wire Wire Line
 $Comp
 L Connector_Generic:Conn_01x04 J?
 U 1 1 61140DCB
-P 10000 4000
-F 0 "J?" H 10080 3992 50  0000 L CNN
-F 1 "SpindleCOMM" H 10080 3901 50  0000 L CNN
-F 2 "" H 10000 4000 50  0001 C CNN
-F 3 "~" H 10000 4000 50  0001 C CNN
-	1    10000 4000
+P 4150 4540
+F 0 "J?" H 4230 4532 50  0000 L CNN
+F 1 "SpindleCOMM" H 4230 4441 50  0000 L CNN
+F 2 "" H 4150 4540 50  0001 C CNN
+F 3 "~" H 4150 4540 50  0001 C CNN
+	1    4150 4540
 	1    0    0    -1  
 $EndComp
-Text Label 9300 3900 0    50   ~ 10
+Text Label 3450 4440 0    50   ~ 10
 SPSPD
-Text Label 9300 4000 0    50   ~ 10
+Text Label 3450 4540 0    50   ~ 10
 ACOM
 Wire Wire Line
-	9300 3900 9800 3900
+	3450 4440 3950 4440
 Wire Wire Line
-	9300 4000 9800 4000
+	3450 4540 3950 4540
 Text Label 6500 6500 2    50   ~ 10
 XLIM+
 Text Label 6500 10000 2    50   ~ 10
@@ -903,7 +887,7 @@ Wire Wire Line
 Text Label 4100 6300 0    50   ~ 10
 ATC_TL+
 Text Label 6500 11000 2    50   ~ 10
-MIST
+MIST+
 Wire Wire Line
 	6500 11000 6000 11000
 Text Label 4300 10200 0    50   ~ 10
@@ -1033,4 +1017,16 @@ Wire Wire Line
 	5050 3800 4700 3800
 Wire Wire Line
 	5050 3540 5050 3800
+Text Label 3450 4640 0    50   ~ 10
+SPEN
+Text Label 3450 4740 0    50   ~ 10
+SPDIR
+Wire Wire Line
+	3950 4640 3450 4640
+Wire Wire Line
+	3450 4740 3950 4740
+Text Label 6490 11100 2    50   ~ 10
+FLOOD+
+Wire Wire Line
+	6490 11100 6000 11100
 $EndSCHEMATC

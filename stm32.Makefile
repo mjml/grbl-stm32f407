@@ -31,7 +31,7 @@
 #CLOCK      = 16000000
 CLOCK       = 168000000
 
-SOURCE    = main.c motion_control.c gcode.c spindle_control.stm32.c coolant_control.c serial.stm32.c \
+SOURCE    = main.c motion_control.c gcode.c spindle_control.stm32.c coolant_control.stm32.c serial.stm32.c \
              protocol.c stepper.stm32.c flash.c gpio.stm32.c gpio_map.c settings.stm32.c planner.c nuts_bolts.c limits.stm32.c jog.c\
              print.c probe.stm32.c report.c system.stm32.c
 BUILDDIR = build
