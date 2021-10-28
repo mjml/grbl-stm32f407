@@ -77,7 +77,7 @@ void st_interrupt();
 //   regardless of whether the main pulse timer is still running or not.
 void st_rst_interrupt();
 
-TIM_HandleTypeDef st_timer;
-TIM_HandleTypeDef st_rst_timer;
+extern TIM_HandleTypeDef st_timer;
+extern TIM_HandleTypeDef st_rst_timer;
 
 #endif

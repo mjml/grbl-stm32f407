@@ -98,7 +98,14 @@
 #include "flash.h"
 #endif
 #include "gcode.h"
+
+#ifdef AVR
 #include "limits.h"
+#elif STM32
+#include "limits.stm32.h"
+#endif
+
+
 #include "motion_control.h"
 #include "planner.h"
 #include "print.h"
