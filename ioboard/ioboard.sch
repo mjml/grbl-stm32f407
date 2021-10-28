@@ -38,9 +38,9 @@ XDIR+
 Text Label 1700 1800 0    50   ~ 10
 XDIR-
 Text Label 1700 1900 0    50   ~ 10
-XENA+
+STENA+
 Text Label 1700 2000 0    50   ~ 10
-XENA-
+STENA-
 Text Label 1700 2100 0    50   ~ 10
 XALM+
 Text Label 1700 2200 0    50   ~ 10
@@ -81,9 +81,9 @@ YDIR+
 Text Label 1700 3300 0    50   ~ 10
 YDIR-
 Text Label 1700 3400 0    50   ~ 10
-YENA+
+STENA+
 Text Label 1700 3500 0    50   ~ 10
-YENA-
+STENA-
 Text Label 1700 3600 0    50   ~ 10
 YALM+
 Text Label 1700 3700 0    50   ~ 10
@@ -124,9 +124,9 @@ ZDIR+
 Text Label 1700 4800 0    50   ~ 10
 ZDIR-
 Text Label 1700 4900 0    50   ~ 10
-ZENA+
+STENA+
 Text Label 1700 5000 0    50   ~ 10
-ZENA-
+STENA-
 Text Label 1700 5100 0    50   ~ 10
 ZALM+
 Text Label 1700 5200 0    50   ~ 10
@@ -253,8 +253,6 @@ $EndComp
 Wire Wire Line
 	6000 1200 5600 1200
 Wire Wire Line
-	5050 1640 4700 1640
-Wire Wire Line
 	4800 7900 4300 7900
 Wire Wire Line
 	5050 1540 4700 1540
@@ -270,8 +268,6 @@ Text Label 5600 1200 0    50   ~ 10
 XALM-
 Wire Wire Line
 	6000 1400 5600 1400
-Wire Wire Line
-	5050 2140 4700 2140
 Wire Wire Line
 	4800 8100 4300 8100
 Wire Wire Line
@@ -328,21 +324,11 @@ Wire Wire Line
 Wire Wire Line
 	5050 2640 5050 2540
 Connection ~ 5050 1540
-Connection ~ 5050 1640
-Wire Wire Line
-	5050 1640 5050 1540
 Connection ~ 5050 1940
-Wire Wire Line
-	5050 1940 5050 1640
 Connection ~ 5050 2040
 Wire Wire Line
 	5050 2040 5050 1940
-Connection ~ 5050 2140
-Wire Wire Line
-	5050 2140 5050 2040
 Connection ~ 5050 2440
-Wire Wire Line
-	5050 2440 5050 2140
 Connection ~ 5050 2540
 Wire Wire Line
 	5050 2540 5050 2440
@@ -385,9 +371,9 @@ ADIR+
 Text Label 1700 6300 0    50   ~ 10
 ADIR-
 Text Label 1700 6400 0    50   ~ 10
-AENA+
+STENA+
 Text Label 1700 6500 0    50   ~ 10
-AENA-
+STENA-
 $Comp
 L Connector_Generic:Conn_01x08 J?
 U 1 1 607582D3
@@ -424,9 +410,9 @@ BDIR+
 Text Label 1700 7800 0    50   ~ 10
 BDIR-
 Text Label 1700 7900 0    50   ~ 10
-BENA+
+STENA+
 Text Label 1700 8000 0    50   ~ 10
-BENA-
+STENA-
 Text Label 1700 8100 0    50   ~ 10
 BALM+
 Text Label 1700 8200 0    50   ~ 10
@@ -459,8 +445,6 @@ ADIR-
 Wire Wire Line
 	6000 2000 5600 2000
 Wire Wire Line
-	5050 3640 4700 3640
-Wire Wire Line
 	6000 9100 6500 9100
 Wire Wire Line
 	5050 3540 4700 3540
@@ -474,8 +458,6 @@ Text Label 6500 9100 2    50   ~ 10
 BDIR-
 Text Label 5600 2000 0    50   ~ 10
 BALM-
-Wire Wire Line
-	5050 3640 5050 3540
 Connection ~ 5050 2640
 Connection ~ 5050 2940
 Wire Wire Line
@@ -626,32 +608,22 @@ $EndComp
 Connection ~ 11780 1600
 Wire Wire Line
 	11780 1600 11580 1600
-Text Label 4700 3640 0    50   ~ 10
-BENA+
 Text Label 4700 3540 0    50   ~ 10
 BDIR+
 Text Label 4700 3450 0    50   ~ 10
 BPUL+
-Text Label 4700 3150 0    50   ~ 10
-AENA+
 Text Label 4700 3050 0    50   ~ 10
 ADIR+
 Text Label 4700 2940 0    50   ~ 10
 APUL+
-Text Label 4700 2640 0    50   ~ 10
-ZENA+
 Text Label 4700 2540 0    50   ~ 10
 ZDIR+
 Text Label 4700 2440 0    50   ~ 10
 ZPUL+
-Text Label 4700 2140 0    50   ~ 10
-YENA+
 Text Label 4700 2040 0    50   ~ 10
 YDIR+
 Text Label 4700 1940 0    50   ~ 10
 YPUL+
-Text Label 4700 1640 0    50   ~ 10
-XENA+
 Text Label 4700 1540 0    50   ~ 10
 XDIR+
 Text Label 4700 1440 0    50   ~ 10
@@ -1051,4 +1023,14 @@ Wire Wire Line
 	2050 9850 1740 9850
 Wire Wire Line
 	2050 9950 1740 9950
+Wire Wire Line
+	5050 1540 5050 1940
+Wire Wire Line
+	5050 2040 5050 2440
+Text Label 4700 3800 0    50   ~ 10
+STENA+
+Wire Wire Line
+	5050 3800 4700 3800
+Wire Wire Line
+	5050 3540 5050 3800
 $EndSCHEMATC

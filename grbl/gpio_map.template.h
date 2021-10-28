@@ -1,15 +1,10 @@
 #pragma once
 
-// Defines
-
 $vardefines
 
+#include "grbl.h"
 #include "gpio.stm32.h"
 
-
-
-
-// Prototypes
 
 $varproto
 

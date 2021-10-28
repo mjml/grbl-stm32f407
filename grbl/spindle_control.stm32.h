@@ -29,8 +29,16 @@
 #define SPINDLE_STATE_CW       bit(0)
 #define SPINDLE_STATE_CCW      bit(1)
 
-// Formerly in cpu_map.h
-#define SPINDLE_PWM_OFF_VALUE 0
+// #define SPINDLE_TIM  
+#define SPINDLE_PWM_MAX_VALUE     0xffff
+  #ifndef SPINDLE_PWM_MIN_VALUE
+    // Note that this does not correspond to 0 RPM. The VFD will define a minimum speed for the spindle to avoid burnouts.
+    // This value is simply the bottom of the mm/grbl's control range.
+    #define SPINDLE_PWM_MIN_VALUE   1   
+  #endif
+#define SPINDLE_PWM_OFF_VALUE     0
+#define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)
+    
 
 // Initializes spindle pins and hardware PWM, if enabled.
 void spindle_init();
@@ -50,11 +58,12 @@ uint8_t spindle_get_state();
   void spindle_set_state(uint8_t state, float rpm); 
   
   // Sets spindle PWM quickly for stepper ISR. Also called by spindle_set_state().
-  // NOTE: 328p PWM register is 8-bit.
-  void spindle_set_speed(uint8_t pwm_value);
+  // NOTE: STM32F4 timers can be up to 32-bit
+
+  void spindle_set_speed(uint32_t pwm_value);
   
   // Computes 328p-specific PWM register value for the given RPM for quick updating.
-  uint8_t spindle_compute_pwm_value(float rpm);
+  uint32_t spindle_compute_pwm_value(float rpm);
   
 #else
   

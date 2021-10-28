@@ -69,11 +69,9 @@ homes:
   - axis:   b
     home:   E11
 
-flood:
-  out:  Z99 od
-
-mist:
-  out:  B11 od
+coolant:
+  flood:   Z99 od
+  mist:    B11 od
 
 atc:
   release: B14 od
@@ -81,5 +79,6 @@ atc:
 
 spindle:
   ena:  D15 od
-  dir:  D13 od
-  pwm:  Z99 od
+#  dir:  D13 od
+  pwm:  F6
+  tim:  TIM10 CH1

@@ -41,6 +41,8 @@
 #include <stm32f4xx_hal_dma.h>
 #include <stm32f4xx_hal_flash.h>
 #include <stm32f4xx_hal_tim.h>
+#include <stm32f4xx_ll_tim.h>
+
 #include <stm32f4xx_hal_gpio.h>
 // usb core
 #include <usbd_conf.h>
@@ -107,7 +109,12 @@
 #elif STM32
 #include "serial.stm32.h"
 #endif
+
+#ifdef AVR
 #include "spindle_control.h"
+#elif STM32
+#include "spindle_control.stm32.h"
+#endif
 
 #ifdef AVR
 #include "stepper.h"
@@ -128,6 +135,7 @@
   #error "Required HOMING_CYCLE_0 not defined."
 #endif
 
+/* USE_SPINDLE_DIR_AS_ENABLE_PIN is an AVR artifact and is going away.
 #if defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(VARIABLE_SPINDLE)
   #error "USE_SPINDLE_DIR_AS_ENABLE_PIN may only be used with VARIABLE_SPINDLE enabled"
 #endif
@@ -139,6 +147,7 @@
 #if !defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && defined(SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED)
   #error "SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED may only be used with USE_SPINDLE_DIR_AS_ENABLE_PIN enabled"
 #endif
+*/
 
 #if defined(PARKING_ENABLE)
   #if defined(HOMING_FORCE_SET_ORIGIN)

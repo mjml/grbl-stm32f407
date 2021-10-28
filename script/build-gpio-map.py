@@ -313,7 +313,7 @@ def handler_from_pindef (config,sdata,pd):
     elif pd.type == "system":
         return "__SYSTEM_HANDLER__(&{0})".format(pd.name)
     elif pd.type == "probe":
-        return "__PROBE_HANDLER___(&{0})".format(pd.name)
+        return "__PROBE_HANDLER__(&{0})".format(pd.name)
     else:
         raise Exception("Unknown interrupt pin type. Cannot generate handler")
 
@@ -344,9 +344,30 @@ def create_interrupt_handler (config,sdata):
 def create_spindle_defns(config, sdata):
     spindle = config["spindle"]
     title = "///// Spindle /////////////////////////\n"
-    sdata.varproto   += title + "extern gpio_t spindle_en;\n\n"
-    sdata.vardefn    += title + "gpio_t spindle_en;\n\n"
-
+    sdata.varproto   += title
+    sdata.vardefn    += title
+    if "ena" not in spindle:
+        raise Exception("Couldn't find \"ena\" pin definition key/value under spindle section.")
+    if "dir" in spindle:
+        sdata.varproto += "#define SPINDLE_DIR\n"
+    if "pwm" in spindle:
+        sdata.varproto += "#define VARIABLE_SPINDLE\n"
+        (timerbase, channel) = spindle["tim"].split(' ')
+        channel = "TIM_CHANNEL_" + ''.join(filter(str.isdigit, channel))
+        sdata.varproto += "#define SPINDLE_TIM      {0}\n#define SPINDLE_TIM_CH   {1}\n".format(timerbase, channel)
+    for k,s in spindle.items():
+        if k=="tim" or k=="pwm":
+            continue
+        pd = PinDefinition.parse(k,s)
+        sdata.varproto += "extern gpio_t " + "spindle_" + pd.name + ";\n"
+        sdata.vardefn  += "gpio_t " + "spindle_" + pd.name + " = " + pd.defnexpr +";\n";
+    sdata.varproto += "\n"
+    sdata.vardefn += "\n"
+        
+def create_coolant_defns(config, sdata):
+    coolant = config["coolant"]
+    title = "///// Coolant /////////////////////////\n"
+    sdata.varproto   += title + ""
 
 def create_code (config):
     global sdata
@@ -356,6 +377,7 @@ def create_code (config):
     create_motor_defns(config, sdata)
     create_limit_defns(config, sdata)
     create_spindle_defns(config, sdata)
+    create_coolant_defns(config, sdata)
     create_interrupt_handler(config, sdata)
 
 

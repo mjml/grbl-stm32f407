@@ -31,7 +31,7 @@
 #CLOCK      = 16000000
 CLOCK       = 168000000
 
-SOURCE    = main.c motion_control.c gcode.c spindle_control.c coolant_control.c serial.stm32.c \
+SOURCE    = main.c motion_control.c gcode.c spindle_control.stm32.c coolant_control.c serial.stm32.c \
              protocol.c stepper.stm32.c flash.c gpio.stm32.c gpio_map.c settings.stm32.c planner.c nuts_bolts.c limits.stm32.c jog.c\
              print.c probe.stm32.c report.c system.stm32.c
 BUILDDIR = build
@@ -45,7 +45,7 @@ OBJCOPY=arm-none-eabi-objcopy
 CC=arm-none-eabi-gcc
 AS=arm-none-eabi-as
 SIZE=arm-none-eabi-size
-CFLAGS=-DSTM32 -DSTM32F407xx -std=c99 -g -Wall -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CFLAGS=-DSTM32 -DSTM32F407xx -DSPINDLE_ENABLE_OFF_WITH_ZERO_SPEED -DUSE_FULL_LL_DRIVER -std=c99 -g -Wall -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
 LDSCRIPT=
 LIBS=
 LIBDIR=

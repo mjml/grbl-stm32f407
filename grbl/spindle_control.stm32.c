@@ -29,26 +29,39 @@
 
 void spindle_init()
 {
-  #ifdef VARIABLE_SPINDLE
-    // Configure variable spindle PWM and enable pin, if requried. On the Uno, PWM and enable are
-    // combined unless configured otherwise.
+#ifdef VARIABLE_SPINDLE
+  // Configure variable spindle PWM and enable pin, if requried. On the Uno, PWM and enable are
+  // combined unless configured otherwise.
+  /*
     SPINDLE_PWM_DDR |= (1<<SPINDLE_PWM_BIT); // Configure as PWM output pin.
     SPINDLE_TCCRA_REGISTER = SPINDLE_TCCRA_INIT_MASK; // Configure PWM output compare timer
     SPINDLE_TCCRB_REGISTER = SPINDLE_TCCRB_INIT_MASK;
-    #ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
-      SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
-    #else
-      #ifndef ENABLE_DUAL_AXIS
-        SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
-      #endif
-    #endif
-    pwm_gradient = SPINDLE_PWM_RANGE/(settings.rpm_max-settings.rpm_min);
-  #else
-    SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
-    #ifndef ENABLE_DUAL_AXIS
-      SPINDLE_DIRECTION_DDR |= (1<<SPINDLE_DIRECTION_BIT); // Configure as output pin.
-    #endif
-  #endif
+  */
+
+  LL_TIM_DeInit(SPINDLE_TIM);
+  LL_TIM_InitTypeDef timinit;
+  timinit.Prescaler = 0;
+  timinit.CounterMode = LL_TIM_COUNTERMODE_UP;
+  // FIXME: For 32-bit timers, this would have to be 0xffffffff.
+  timinit.Autoreload = 0xffff;
+  timinit.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  timinit.RepetitionCounter = 0;
+
+  LL_TIM_Init(SPINDLE_TIM, &timinit);
+  LL_TIM_OC_ConfigOutput(SPINDLE_TIM, SPINDLE_TIM_CH, LL_TIM_OCPOLARITY_HIGH);
+  LL_TIM_OC_SetMode(SPINDLE_TIM, SPINDLE_TIM_CH, LL_TIM_OCMODE_PWM1);
+  LL_TIM_OC_SetCompareCH1(SPINDLE_TIM, SPINDLE_PWM_MAX_VALUE);
+  
+  pwm_gradient = SPINDLE_PWM_RANGE/(settings.rpm_max-settings.rpm_min);
+
+#endif
+
+  // Enable the stepper enable pin
+  gpio_enable(&spindle_ena);
+  
+#ifdef SPINDLE_DIR
+  gpio_enable(&spindle_dir);
+#endif
 
   spindle_stop();
 }
@@ -56,38 +69,21 @@ void spindle_init()
 
 uint8_t spindle_get_state()
 {
-  #ifdef VARIABLE_SPINDLE
-    #ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
-      // No spindle direction output pin. 
-      #ifdef INVERT_SPINDLE_ENABLE_PIN
-        if (bit_isfalse(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT))) { return(SPINDLE_STATE_CW); }
-      #else
-        if (bit_istrue(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT))) { return(SPINDLE_STATE_CW); }
-      #endif
-    #else
-      if (SPINDLE_TCCRA_REGISTER & (1<<SPINDLE_COMB_BIT)) { // Check if PWM is enabled.
-        #ifdef ENABLE_DUAL_AXIS
-          return(SPINDLE_STATE_CW);
-        #else
-          if (SPINDLE_DIRECTION_PORT & (1<<SPINDLE_DIRECTION_BIT)) { return(SPINDLE_STATE_CCW); }
-          else { return(SPINDLE_STATE_CW); }
-        #endif
-      }
-    #endif
-  #else
-    #ifdef INVERT_SPINDLE_ENABLE_PIN
-      if (bit_isfalse(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT))) { 
-    #else
-      if (bit_istrue(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT))) {
-    #endif
-      #ifdef ENABLE_DUAL_AXIS    
-        return(SPINDLE_STATE_CW);
-      #else
-        if (SPINDLE_DIRECTION_PORT & (1<<SPINDLE_DIRECTION_BIT)) { return(SPINDLE_STATE_CCW); }
-        else { return(SPINDLE_STATE_CW); }
-      #endif
+  //if (bit_istrue(SPINDLE_ENABLE_PORT,(1<<SPINDLE_ENABLE_BIT))) { return(SPINDLE_STATE_CW); }
+  bool enable = gpio_read_pin(&spindle_ena);
+#ifdef SPINDLE_DIR
+  bool reverse_direction = gpio_read_pin(&spindle_dir);
+  if (enable) {
+    if (reverse_direction) {
+      return SPINDLE_STATE_CCW;
+    } else {
+      return SPINDLE_STATE_CW;
     }
-  #endif
+  }
+#else 
+  if (enable) return SPINDLE_STATE_CW;
+#endif
+
   return(SPINDLE_STATE_DISABLE);
 }
 
@@ -97,41 +93,33 @@ uint8_t spindle_get_state()
 // Called by spindle_init(), spindle_set_speed(), spindle_set_state(), and mc_reset().
 void spindle_stop()
 {
-  #ifdef VARIABLE_SPINDLE
-    SPINDLE_TCCRA_REGISTER &= ~(1<<SPINDLE_COMB_BIT); // Disable PWM. Output voltage is zero.
-    #ifdef USE_SPINDLE_DIR_AS_ENABLE_PIN
-      #ifdef INVERT_SPINDLE_ENABLE_PIN
-        SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);  // Set pin to high
-      #else
-        SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low
-      #endif
-    #endif
-  #else
-    #ifdef INVERT_SPINDLE_ENABLE_PIN
-      SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);  // Set pin to high
-    #else
-      SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low
-    #endif
-  #endif
+#ifdef VARIABLE_SPINDLE
+  LL_TIM_DisableCounter(SPINDLE_TIM);
+  LL_TIM_SetCounter(SPINDLE_TIM, 0);
+#endif
+
+  gpio_reset_pin(&spindle_ena);
+  
 }
 
 
 #ifdef VARIABLE_SPINDLE
   // Sets spindle speed PWM output and enable pin, if configured. Called by spindle_set_state()
   // and stepper ISR. Keep routine small and efficient.
-  void spindle_set_speed(uint8_t pwm_value)
+  void spindle_set_speed(uint32_t pwm_value)
   {
-    SPINDLE_OCR_REGISTER = pwm_value; // Set PWM output level.
+    LL_TIM_OC_SetCompareCH1(SPINDLE_TIM, pwm_value);
+    
+    //SPINDLE_OCR_REGISTER = pwm_value; // Set PWM output level.
+
     #ifdef SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED
       if (pwm_value == SPINDLE_PWM_OFF_VALUE) {
         spindle_stop();
       } else {
-        SPINDLE_TCCRA_REGISTER |= (1<<SPINDLE_COMB_BIT); // Ensure PWM output is enabled.
-        #ifdef INVERT_SPINDLE_ENABLE_PIN
-          SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT);
-        #else
-          SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
-        #endif
+        gpio_set_pin(&spindle_ena);
+        if (LL_TIM_IsEnabledCounter(SPINDLE_TIM)) {
+          LL_TIM_EnableCounter(SPINDLE_TIM);
+        }
       }
     #else
       if (pwm_value == SPINDLE_PWM_OFF_VALUE) {
@@ -189,9 +177,9 @@ void spindle_stop()
   #else 
   
     // Called by spindle_set_state() and step segment generator. Keep routine small and efficient.
-    uint8_t spindle_compute_pwm_value(float rpm) // 328p PWM register is 8-bit.
+    uint32_t spindle_compute_pwm_value(float rpm) // 328p PWM register is 8-bit.
     {
-      uint8_t pwm_value;
+      uint32_t pwm_value;
       rpm *= (0.010*sys.spindle_speed_ovr); // Scale by spindle speed override value.
       // Calculate PWM register value based on rpm max/min settings and programmed rpm.
       if ((settings.rpm_min >= settings.rpm_max) || (rpm >= settings.rpm_max)) {
@@ -239,11 +227,11 @@ void spindle_stop()
   
   } else {
     
-    #if !defined(USE_SPINDLE_DIR_AS_ENABLE_PIN) && !defined(ENABLE_DUAL_AXIS)
+    #ifdef SPINDLE_DIR
       if (state == SPINDLE_ENABLE_CW) {
-        SPINDLE_DIRECTION_PORT &= ~(1<<SPINDLE_DIRECTION_BIT);
+        gpio_reset_pin(&stepper_dir);
       } else {
-        SPINDLE_DIRECTION_PORT |= (1<<SPINDLE_DIRECTION_BIT);
+        gpio_set_pin(&stepper_dir);
       }
     #endif
   
