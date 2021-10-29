@@ -9,6 +9,7 @@ probes:
   atc_tool_length:   B4 
   contact:           B3
 
+# This is just a flat list of the axis names.
 axes:
   - "x"
   - "y"
@@ -16,6 +17,15 @@ axes:
   - "a"
   - "b"
 
+# Each entry in this list is a map containing an axis and some pin names as keys followed by a pin definition:
+#   axis: A reference to one of the axes given in the axes section, given above.
+#         Note that this allows you to specify several steppers for the same axis.
+#   pul: The stepper pulse output pin
+#   dir: The stepper direction output pin
+#   ena: The stepper enable output pin
+#   alm: (Optional) A stepper alarm input pin
+# The last entry allows you to use closed-loop stepper drivers and motors. When the driver encounters a failed state,
+#   it will use this pin to signal to the controller that it should E-Stop or something similarly drastic.
 motors:
   - axis: x 
     pul:  C7  od 
@@ -57,6 +67,9 @@ limits:
   - axis:   b
     limit:  E11
 
+# A list of maps, each having two keys:
+#   axis: A reference to one of the axes from the axes section
+#   home: A pin definition defining a limit switch
 homes:
   - axis:   x
     home:   E6
@@ -69,16 +82,21 @@ homes:
   - axis:   b
     home:   E11
 
+# Just two output pins in this section, "flood" and "mist", both optional.
 coolant:
   flood:   B10 od
   mist:    B11 od
 
+# The ATC module defines a few output pins of its own.
+# TODO: The ATC module hasn't been written yet, but this section might include i.e. auxiliary outputs to control
+#         linear actuators or any other robotics needed to assist with changing tool bits.
 atc:
   release: B14 od
   engage:  B12 ode
 
+# This section has a standard pin for enable and a second optional pin for pwm (speed control).
+# It also has a key named "tim" which defines an STM32 timer and channel. E.g.: "tim: TIM10 CH1"
 spindle:
   ena:  D15 od
-#  dir:  D13 od
   pwm:  F6
   tim:  TIM10 CH1
