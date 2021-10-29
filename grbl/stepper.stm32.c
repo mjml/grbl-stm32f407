@@ -667,6 +667,18 @@ void st_rst_interrupt()
 #endif
 
 
+#ifdef STEPPER_CLOSEDLOOP
+void st_alarm_interrupt()
+{
+  /* TODO: This interrupt is generated when a closed-loop stepper motor goes out of PID range, iow, misses too many steps.
+    This can occur e.g. because of a hard tool crash, or maybe a component failure.
+    Here we should set system variables indicating which motor failed, and enter an e-stop state.
+  */
+  
+}
+#endif
+
+
 // Generates the step and direction port invert masks used in the Stepper Interrupt Driver.
 void st_generate_step_dir_invert_masks()
 {

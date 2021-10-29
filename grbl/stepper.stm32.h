@@ -39,6 +39,11 @@
 #define STEPPER_RSTBASE               TIM5
 #define STEPPER_RSTBASE_CLK_ENABLE  __TIM5_CLK_ENABLE
 
+// This is for closed-loop steppers
+#ifdef STEPPER_ENCODER_ALARM
+#define __ENCODER_ALARM_HANDLER__ st_alarm_interrupt
+#endif
+
 // Initialize and setup the stepper motor subsystem
 void stepper_init();
 
@@ -76,6 +81,10 @@ void st_interrupt();
 // GRBL uses two pulses instead of an OC mode so that the pulse is guaranteed to reset after an interval,
 //   regardless of whether the main pulse timer is still running or not.
 void st_rst_interrupt();
+
+#ifdef STEPPER_ENCODER_ALARM
+void st_alarm_interrupt();
+#endif
 
 extern TIM_HandleTypeDef st_timer;
 extern TIM_HandleTypeDef st_rst_timer;
