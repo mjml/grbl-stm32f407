@@ -210,6 +210,11 @@ void OTG_FS_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+extern void delay_timer_interrupt();
+void TIM2_IRQHandler(void)
+{
+  delay_timer_interrupt();
+}
 
 extern TIM_HandleTypeDef st_timer;
 extern TIM_HandleTypeDef st_rst_timer;
@@ -223,6 +228,8 @@ void TIM6_DAC_IRQHandler(void)
   HAL_TIM_IRQHandler(&st_rst_timer);
 }
 
+extern void st_interrupt();
+extern void st_rst_interrupt();
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {
   if (htim == &st_timer) {
