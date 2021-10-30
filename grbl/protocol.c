@@ -198,7 +198,7 @@ void protocol_main_loop ()
       protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
     }
     // All systems go!
-    system_execute_startup(line); // Execute startup script.
+    system_execute_startup((char*)line); // Execute startup script.
   }
 
   while (1) {
@@ -241,7 +241,7 @@ void protocol_main_loop ()
         report_status_message(STATUS_OK);
       } else if ( line[0] == '$' ) {
         // interpret as realtime command
-        report_status_message(system_execute_line(line));
+        report_status_message(system_execute_line((char*)line));
       } else if ( sys.state & (STATE_ALARM | STATE_JOG) ) {
         // block if in alarm or jog mode
         report_status_message(STATUS_SYSTEM_GC_LOCK);
@@ -263,13 +263,13 @@ void protocol_main_loop ()
 // This filter does not move the read pointer rxbuf[rxtail].pos.
 void protocol_preprocess (uint8_t* line, uint8_t* end, uint8_t* line_flags, uint16_t* pcmdlen, uint16_t* plinelen, bool* complete)
 {
-  char* tgt=line;
-  char* src=line;
+  char* tgt=(char*)line;
+  char* src=(char*)line;
 
   *pcmdlen = 0;
   *plinelen = 0;
   uint8_t c;
-  while (src != end) {
+  while (src != (char*)(end)) {
     c = *src;
     if (c=='\n'|| c=='\r' || c==0) {
       *(tgt) = 0;
