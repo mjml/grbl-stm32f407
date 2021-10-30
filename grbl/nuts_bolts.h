@@ -44,7 +44,16 @@
 // Conversions
 #define MM_PER_INCH (25.40)
 #define INCH_PER_MM (0.0393701)
+
+#ifdef AVR
 #define TICKS_PER_MICROSECOND (F_CPU/1000000)
+#elif STM32F407xx
+#define DELAY_TIM_FREQ                42000000
+#define DELAY_US_PRESCALER            ((DELAY_TIM_FREQ / 1000000)-1)
+#define DELAY_MS_PRESCALER            ((DELAY_TIM_FREQ / 1000)-1)
+#else
+#error "Only AVR and STM32F407xx are supported. You need to reconfigure pins and clock domains for other architectures. TICKS_PER_MICROSECOND is undefined."
+#endif
 
 #define DELAY_MODE_DWELL       0
 #define DELAY_MODE_SYS_SUSPEND 1
@@ -63,6 +72,12 @@
 #define bit_false(x,mask) (x) &= ~(mask)
 #define bit_istrue(x,mask) ((x & mask) != 0)
 #define bit_isfalse(x,mask) ((x & mask) == 0)
+
+#ifdef STM32
+// Precision high-res timer used for delay_us (oneshot mode)
+#define DELAY_TIMBASE        TIM2
+#define DELAY_CLK_ENABLE   __TIM2_CLK_ENABLE
+#endif
 
 // Read a floating point value from a string. Line points to the input buffer, char_counter
 // is the indexer pointing to the current character of the line, while float_ptr is

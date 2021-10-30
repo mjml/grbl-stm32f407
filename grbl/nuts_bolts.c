@@ -19,11 +19,30 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef STM32
+#include <stm32f4xx_ll_tim.h>
+#endif
 #include "grbl.h"
 
 
 #define MAX_INT_DIGITS 8 // Maximum number of digits in int32 (and float)
 
+volatile bool precision_timer_elapsed;
+
+void init_nuts_bolts()
+{
+  precision_timer_elapsed = false;
+  #ifdef STM32
+  LL_TIM_InitTypeDef initdelay;
+  LL_TIM_StructInit(&initdelay);
+  initdelay.Prescaler = DELAY_US_PRESCALER;
+  initdelay.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  initdelay.RepetitionCounter = 0;
+  initdelay.CounterMode = LL_TIM_COUNTERMODE_UP;
+  initdelay.Autoreload = 0xffff;
+  LL_TIM_Init(DELAY_TIMBASE, &initdelay);
+  #endif
+}
 
 // Extracts a floating point value from a string. The following code is based loosely on
 // the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
@@ -121,7 +140,11 @@ void delay_sec(float seconds, uint8_t mode)
 		  protocol_exec_rt_system();
 		  if (sys.suspend & SUSPEND_RESTART_RETRACT) { return; } // Bail, if safety door reopens.
 		}
+    #ifdef AVR
 		_delay_ms(DWELL_TIME_STEP); // Delay DWELL_TIME_STEP increment
+    #elif STM32
+    delay_ms(DWELL_TIME_STEP);
+    #endif
 	}
 }
 
@@ -130,7 +153,11 @@ void delay_sec(float seconds, uint8_t mode)
 // which only accepts constants in future compiler releases.
 void delay_ms(uint16_t ms)
 {
+  #ifdef AVR
   while ( ms-- ) { _delay_ms(1); }
+  #elif STM32
+  HAL_Delay(ms);
+  #endif
 }
 
 
@@ -139,6 +166,7 @@ void delay_ms(uint16_t ms)
 // efficiently with larger delays, as the counter adds parasitic time in each iteration.
 void delay_us(uint32_t us)
 {
+  #ifdef AVR
   while (us) {
     if (us < 10) {
       _delay_us(1);
@@ -154,6 +182,18 @@ void delay_us(uint32_t us)
       us -= 1000;
     }
   }
+  #elif STM32
+
+  precision_timer_elapsed = false;
+  LL_TIM_SetPrescaler(DELAY_TIMBASE, DELAY_US_PRESCALER);
+  LL_TIM_SetAutoReload(DELAY_TIMBASE, us);
+  LL_TIM_EnableIT_UPDATE(DELAY_TIMBASE);
+  LL_TIM_SetCounter(DELAY_TIMBASE,0);
+  LL_TIM_EnableCounter(DELAY_TIMBASE);
+  while (!precision_timer_elapsed) { }
+  precision_timer_elapsed = false;
+
+  #endif
 }
 
 
@@ -188,3 +228,17 @@ float limit_value_by_axis_maximum(float *max_value, float *unit_vec)
   }
   return(limit_value);
 }
+
+#ifdef STM32
+/**
+ * Simply sets a flag and shuts off the delay timer. This interrupt-driven approach is superior to polling
+ * for an update flag, which can theoretically miss if the cpu gets caught in some other handler 
+ * and misses the update state.
+ **/
+void delay_timer_interrupt ()
+{
+  precision_timer_elapsed = true;
+  LL_TIM_DisableCounter(DELAY_TIMBASE);
+  LL_TIM_SetCounter(DELAY_TIMBASE,0);
+}
+#endif
