@@ -149,12 +149,12 @@ uint8_t home_get_state()
   for (int i=0; i < NUM_AXES; i++) {
     bool pin = false;
     if (HOMESW_MASK & bit(i)) {
-      pin = gpio_read_pin(&home[i])
+      pin = gpio_read_pin(&home[i]);
     } else {
-      pin = gpio_read_pin(&limit[i])
+      pin = gpio_read_pin(&limit[i]);
     }
     if (pin) {
-      home_state |= bit(i)
+      home_state |= bit(i);
     }
   }
   #endif

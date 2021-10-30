@@ -301,7 +301,7 @@ def create_limit_defns (config, sdata):
         
         sdata.varproto += "#define NUM_HOMES NUM_AXES\n" 
         sdata.varproto += "#define HOMESW_MASK {0}\n".format(homesw_mask)
-        sdata.varproto += "extern gpio_t home[NUM_HOMES];\n\n"
+        sdata.varproto += "extern gpio_t home[NUM_HOMES];\n"
         sdata.vardefn  += "gpio_t home[NUM_HOMES] = {{ \n{0} \n}};\n\n".format(",\n".join(blocks))
 
     limits = config["limits"]
@@ -321,7 +321,7 @@ def create_limit_defns (config, sdata):
     
     sdata.varproto += "#define NUM_LIMITS {0}\n".format(len(limits))
     if len(limits) > 0:
-        sdata.varproto += "extern gpio_t limit[NUM_LIMITS];\n"
+        sdata.varproto += "extern gpio_t limit[NUM_LIMITS];\n\n"
         sdata.vardefn += "gpio_t limit[NUM_LIMITS] = {{ \n{0} \n}};\n\n".format(",\n".join(blocks))
 
   
