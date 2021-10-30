@@ -190,6 +190,8 @@ void delay_us(uint32_t us)
   LL_TIM_EnableIT_UPDATE(DELAY_TIMBASE);
   LL_TIM_SetCounter(DELAY_TIMBASE,0);
   LL_TIM_EnableCounter(DELAY_TIMBASE);
+  
+  // Spinwait on the high-precision timer
   while (!precision_timer_elapsed) { }
   precision_timer_elapsed = false;
 
