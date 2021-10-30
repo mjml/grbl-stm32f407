@@ -273,9 +273,37 @@ def create_limit_defns (config, sdata):
     Configures limit and homing pins.
     '''
     title = "///// Limits & Homing /////////////////\n"
-    protos = title
-    defns = title
+    sdata.varproto += title
+    sdata.vardefn += title
     
+    # Note that home interrupts need to be called first, since a single pin servicing both homes and limits
+    #  will fire both interrupts, and limit code may put state into E-Stop, whereas the home interrupt 
+    #  just needs to check if we're in a homing routine.
+    if "homes" in config:
+        homes = config["homes"]
+        sdata.vardefines += "#define SEPARATE_HOME_DEFNS\n"
+        if len(homes) != len(sdata.axes):
+            raise RuntimeError("Number of homing switches does not equal the number of axes.")
+        blocks = [""] * len(homes)
+        homesw_mask = 0
+        for i in range(len(homes)):
+            h = homes[i]
+            if not "axis" in h:
+                raise RuntimeError("Couldn't find axis")
+            if not "home" in h:
+                raise RuntimeError("Couldn't find homing pin definition in homes item {0}".format(i))
+            axis = h["axis"]
+            ai = get_axis(axis)
+            homesw_mask = homesw_mask | (0x1 << ai)
+            pd = PinDefinition.parse("home[AXIS_{0}]".format(axis.upper()),h["home"],type="home")
+            blocks[ai] = "  // {0} axis\n  {1}".format(h["axis"],pd.defnexpr)
+            sdata.itpindefs.append(pd)
+        
+        sdata.varproto += "#define NUM_HOMES NUM_AXES\n" 
+        sdata.varproto += "#define HOMESW_MASK {0}\n".format(homesw_mask)
+        sdata.varproto += "extern gpio_t home[NUM_HOMES];\n\n"
+        sdata.vardefn  += "gpio_t home[NUM_HOMES] = {{ \n{0} \n}};\n\n".format(",\n".join(blocks))
+
     limits = config["limits"]
     if len(limits) > len(sdata.axes):
         raise RuntimeError("More limits than defined axes.")
@@ -296,28 +324,7 @@ def create_limit_defns (config, sdata):
         sdata.varproto += "extern gpio_t limit[NUM_LIMITS];\n"
         sdata.vardefn += "gpio_t limit[NUM_LIMITS] = {{ \n{0} \n}};\n\n".format(",\n".join(blocks))
 
-    homes = config["homes"]
-    sdata.varproto += "#define NUM_HOMES {0}\n".format(len(homes))
-    if len(homes) > len(sdata.axes):
-        raise RuntimeError("More homing switches than defined axes.")
-    blocks = [""] * len(homes)
-    for i in range(len(homes)):
-        h = homes[i]
-        if not "axis" in h:
-            raise RuntimeError("Couldn't find axis")
-        if not "home" in h:
-            raise RuntimeError("Couldn't find homing pin definition in homes item {0}".format(i))
-        axis = h["axis"]
-        pd = PinDefinition.parse("home[AXIS_{0}]".format(axis.upper()),h["home"],type="home")
-        blocks[get_axis(h["axis"])] = "  // {0} axis\n  {1}".format(h["axis"],pd.defnexpr)
-        sdata.itpindefs.append(pd)
-
-    sdata.vardefn += "#define NUM_HOMES {0}\n".format(len(homes))
-    if len(homes) > 0:
-        sdata.varproto += "extern gpio_t home[NUM_HOMES];\n\n"
-        sdata.vardefn  += "gpio_t home[NUM_HOMES] = {{ \n{0} \n}};\n\n".format(",\n".join(blocks))
-
-
+  
 def handler_from_pindef (config,sdata,pd):
     '''
     This method simply generates a bunch of preprocessor macro calls that can be defined within the source code itself.

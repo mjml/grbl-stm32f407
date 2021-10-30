@@ -25,6 +25,7 @@
 #include "gpio.stm32.h"
 
 #define __LIMIT_HANDLER__ limit_interrupt_handler
+#define __HOME_HANDLER__  home_interrupt_handler
 
 // Initialize the limits module
 void limits_init();
@@ -43,5 +44,8 @@ void limits_soft_check(float *target);
 
 // Called during gpio interrupt handling
 void limit_interrupt_handler();
+
+// Called during gpio interrupt handling
+void home_interrupt_handler();
 
 #endif
