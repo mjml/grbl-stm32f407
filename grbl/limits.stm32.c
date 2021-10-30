@@ -67,6 +67,14 @@ void limits_init()
     gpio_enable(&limit[i]);
   }
 
+  #ifdef SEPARATE_HOME_DEFNS
+  for (int i=0; i < NUM_HOMES; i++) {
+    if (HOMESW_MASK & bit(i)) {
+      gpio_enable(&home[i]);
+    }
+  }
+  #endif
+
 }
 
 
@@ -80,6 +88,15 @@ void limits_disable()
   for (int i=0; i < NUM_LIMITS; i++) {
     gpio_disable(&limit[i]);
   }
+
+  #ifdef SEPARATE_HOME_DEFNS
+  for (int i=0; i < NUM_HOMES; i++) {
+    if (HOMESW_MASK & bit(i)) {
+      gpio_disable(&home[i]);
+    }
+  }
+  #endif
+
 }
 
 
@@ -110,11 +127,38 @@ uint8_t limits_get_state()
   for (int i=0; i < NUM_LIMITS; i++) {
     bool pin = gpio_read_pin(&limit[i]);
     if (pin) {
-      limit_state |= (0x1 << i);
+      limit_state |= bit(i);
     }
   }
   return limit_state;
 
+}
+
+
+uint8_t home_get_state()
+{
+  uint8_t home_state = 0;
+  #ifndef SEPARATE_HOME_DEFNS
+  for (int i=0; i < NUM_LIMITS; i++) {
+    bool pin = gpio_read_pin(&home[i]);
+    if (pin) {
+      home_state |= bit(i);
+    }
+  }
+  #else
+  for (int i=0; i < NUM_AXES; i++) {
+    bool pin = false;
+    if (HOMESW_MASK & bit(i)) {
+      pin = gpio_read_pin(&home[i])
+    } else {
+      pin = gpio_read_pin(&limit[i])
+    }
+    if (pin) {
+      home_state |= bit(i)
+    }
+  }
+  #endif
+  return home_state;
 }
 
 
@@ -319,7 +363,7 @@ void limits_go_home(uint8_t cycle_mask)
     do {
       if (approach) {
         // Check limit state. Lock out cycle axes when they change.
-        limit_state = limits_get_state();
+        limit_state = home_get_state();
         for (idx=0; idx<N_AXIS; idx++) {
           if (/*axislock & step_pin[idx]*/ axislock & bit(idx)) {
             if (limit_state & (1 << idx)) {
@@ -455,6 +499,12 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
   sys.step_control = STEP_CONTROL_NORMAL_OP; // Return step control to normal operation.
+}
+
+void home_interrupt_handler ()
+{
+  
+
 }
 
 
