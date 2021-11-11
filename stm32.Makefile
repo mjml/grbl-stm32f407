@@ -39,13 +39,14 @@ GRBL_PATH = grbl
 OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o)))
 GRBL_OBJECTS = $(addprefix $(BUILDDIR)/,$(notdir $(SOURCE:.c=.o))) 
 
+MICROMACHINE_COMMIT_HASH=$(shell git log -n 1 --pretty=format:%h)
 
 OBJDUMP=arm-none-eabi-objdump
 OBJCOPY=arm-none-eabi-objcopy
 CC=arm-none-eabi-gcc
 AS=arm-none-eabi-as
 SIZE=arm-none-eabi-size
-CFLAGS=-DSTM32 -DSTM32F407xx -DSPINDLE_ENABLE_OFF_WITH_ZERO_SPEED -DUSE_FULL_LL_DRIVER -std=c99 -g -Wall -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CFLAGS=-DSTM32 -DSTM32F407xx -DSPINDLE_ENABLE_OFF_WITH_ZERO_SPEED -DMICROMACHINE_COMMIT_HASH=\"$(MICROMACHINE_COMMIT_HASH)\" -DUSE_FULL_LL_DRIVER -std=c99 -g -Wall -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16
 LDSCRIPT=STM32F407ZETX_FLASH.ld
 LIBS=-lm
 LIBDIR=

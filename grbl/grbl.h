@@ -21,9 +21,16 @@
 #ifndef grbl_h
 #define grbl_h
 
+#include <stdarg.h>
+
 // Grbl versioning system
-#define GRBL_VERSION "1.1h"
-#define GRBL_VERSION_BUILD "20190830"
+#define MICROMACHINE_VERSION "0.1"
+#define MICROMACHINE_VERSION_BUILD MICROMACHINE_COMMIT_HASH
+
+#ifdef STM32
+// AVR-optimization PSTR not used by STM32, so no-op it by defining it as the identity.
+#define PSTR(args...) (args)
+#endif
 
 // Define standard libraries used by Grbl.
 #ifdef AVR
@@ -56,6 +63,7 @@
 #else 
 #error "You must define AVR or STM32 in order to compile this project."
 #endif
+
 #include <math.h>
 #include <inttypes.h>
 #include <string.h>
@@ -68,6 +76,10 @@
 #include "nuts_bolts.h"
 
 #include "defaults.h"
+
+#ifdef STM32
+#include "log.h"
+#endif
 
 #ifdef AVR
 #include "cpu_map.h"

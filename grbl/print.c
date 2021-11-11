@@ -19,6 +19,7 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdarg.h>
 #include "grbl.h"
 
 
@@ -29,12 +30,27 @@ void printString(const char *s)
 }
 
 
+#ifdef AVR
 // Print a string stored in PGM-memory
 void printPgmString(const char *s)
 {
   char c;
   while ((c = pgm_read_byte_near(s++)))
     serial_write(c);
+}
+#endif
+
+
+void printFmtString(const char* fmt, ...)
+{
+  char bufr[1024];
+  va_list va;
+  va_start(va,fmt);
+  int size = vsnprintf(bufr, 1024, fmt, va);
+  for (int i = 0; i < size; i++) {
+    serial_write(bufr[i]);
+  }
+  va_end(va);
 }
 
 

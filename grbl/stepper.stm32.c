@@ -774,7 +774,8 @@ void stepper_init()
   st_timer.Init.ClockDivision     = TIM_CLOCKPRESCALER_DIV1;
   STEPPER_TIMBASE_CLK_ENABLE();
   if (HAL_TIM_Base_Init(&st_timer) != HAL_OK) {
-    // TODO: Critical Error Here
+    printFmtString("Critical: Couldn't intiialize stepper timer.\n");
+    return;
   }
   
   // Configure Timer 0: Stepper Port Reset Interrupt
@@ -787,29 +788,31 @@ void stepper_init()
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
   */
+  STEPPER_RSTBASE_CLK_ENABLE();
+
+  #ifndef STEP_PULSE_DELAY
   memset(&st_rst_timer, 0, sizeof(TIM_HandleTypeDef));
   st_rst_timer.Instance           = STEPPER_RSTBASE;
   st_rst_timer.Init.Prescaler     = (8-1);
   st_rst_timer.Init.CounterMode   = TIM_COUNTERMODE_UP;
   st_rst_timer.Init.Period        = st.step_pulse_time;
   st_rst_timer.Init.ClockDivision = TIM_CLOCKPRESCALER_DIV1;
-  #ifndef STEP_PULSE_DELAY
-  STEPPER_RSTBASE_CLK_ENABLE();
+
   if (HAL_TIM_Base_Init(&st_rst_timer) != HAL_OK) {
-    // TODO: Critical Error Here
+    printFmtString("Critical: Couldn't initialize stepper reset timer.\n");
   }
+
   #else
-  if (HAL_TIM_OC_Init(&st_rst_timer) != HAL_OK) {
-    // TODO: Critical Error Here
-  }
+  // TODO: I'm not sure if this implementation is correct, since OCMode normally has an output pin.
+  //       In theory, configuring in OCMode should allow for a delay in the pulse.
   TIM_OC_InitTypeDef ocConfig;
   memset(&ocConfig,0,sizeof(TIM_OC_InitTypeDef));
   ocConfig.OCMode        = TIM_OCMODE_INACTIVE;
   ocConfig.Pulse         = (STEP_PULSE_DELAY * TICKS_PER_MICROSECOND) >> 3;
   ocConfig.OCPolarity    = TIM_OCPOLARITY_HIGH;
   ocConfig.OCNPolarity   = TIM_OCNPOLARITY_LOW;  
-  if (HAL_TIM_OC_ConfigChannel(&st_rst_timer, & ocConfig, 0) != HAL_OK) {
-    // TODO: Critical Error Here
+  if (HAL_TIM_OC_ConfigChannel(&st_rst_timer, &ocConfig, 0) != HAL_OK) {
+    printFmtString("Couldn't initialize stepper reset timer with pulse delay.\n")
   }
   #endif
   
