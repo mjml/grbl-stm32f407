@@ -159,13 +159,13 @@ $(BUILDDIR)/usbimpl/%.o: $(USBIMPL_SRC)/%.c $(BUILDDIR)/usbimpl
 $(BUILDDIR)/usbimpl:
 	mkdir -p $@
 
-# This one's for stm32 core files
-$(BUILDDIR)/%.o: $(STM32_PATH)/%.c
+# And this one's for the original grbl files
+$(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
 	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 
-# And this one's for the original grbl files
-$(BUILDDIR)/%.o: $(GRBL_PATH)/%.c
+# This one's for stm32 core files
+$(BUILDDIR)/%.o: $(STM32_PATH)/%.c
 	echo $(COMPILE) -c $< -o $@
 	$(COMPILE) -c $< -o $@
 

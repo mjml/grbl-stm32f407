@@ -47,7 +47,6 @@ int main(void)
   HAL_Init();
   SystemClock_Config();
   MX_GPIO_Init();
-  MX_USB_DEVICE_Init();
   MX_RTC_Init();
 
   // Initialize system upon power-up.
@@ -57,7 +56,10 @@ int main(void)
   system_init();   // Configure pinout pins and pin-change interrupt
 
   memset(sys_position,0,sizeof(sys_position)); // Clear machine position.
+  #ifdef AVR
   sei(); // Enable interrupts
+  #endif
+  
 
   // Initialize system state.
   #ifdef FORCE_INITIALIZATION_ALARM
