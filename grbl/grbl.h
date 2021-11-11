@@ -77,10 +77,6 @@
 
 #include "defaults.h"
 
-#ifdef STM32
-#include "log.h"
-#endif
-
 #ifdef AVR
 #include "cpu_map.h"
 #elif STM32
